@@ -1,0 +1,11 @@
+{
+  "name": "玄曜｜專屬 AI 核心",
+  "short_name": "玄曜",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070b16",
+  "theme_color": "#0b1020",
+  "description": "玄曜手機優先 AI 工作中樞",
+  "icons": []
+}
