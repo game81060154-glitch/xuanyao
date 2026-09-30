@@ -1,4 +1,5 @@
 const KEY = "xuanyao.messages.v1";
+const CORE_VERSION = "1.1";
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
 const message = document.getElementById("message");
@@ -61,7 +62,7 @@ async function ask(text){
     add("system",reply);
     backendState.textContent="Demo";
   }finally{
-    coreState.textContent="待命中｜Demo 模式";
+    coreState.textContent="待命中｜本機核心";
   }
 }
 
@@ -86,6 +87,8 @@ clearBtn.addEventListener("click",()=>{
   messages=[];
   save();
   render();
+
+if ("serviceWorker" in navigator) {\n  navigator.serviceWorker.register("./sw.js").catch(() => {});\n}\n
   coreState.textContent="待命中｜Demo 模式";
 });
 
