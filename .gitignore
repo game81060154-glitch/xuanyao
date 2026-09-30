@@ -1,0 +1,11 @@
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Local development
+node_modules/
+dist/
+coverage/
+.DS_Store
