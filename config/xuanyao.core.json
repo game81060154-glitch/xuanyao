@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "name": "玄曜",
+  "mode": "personal-ai-core",
+  "language": "zh-Hant",
+  "principles": [
+    "先理解目標，再拆解任務",
+    "可自動處理的小事直接完成",
+    "重要、不可逆或涉及外部權限的操作先確認",
+    "秘密金鑰只存在後端環境，不進前端"
+  ],
+  "memory": {
+    "shortTermMessages": 20,
+    "localStorageMessages": 80,
+    "longTerm": "planned"
+  },
+  "backend": {
+    "endpoint": "/api/chat",
+    "provider": "pluggable",
+    "modelEnv": "XUANYAO_MODEL"
+  }
+}
