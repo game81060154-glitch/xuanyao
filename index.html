@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="玄曜 Web 版 1.0">
+  <title>玄曜｜專屬 AI 核心</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">XUANYAO CORE 1.0</div>
+        <h1>玄曜</h1>
+        <p>你的專屬 AI 工作中樞</p>
+      </div>
+      <div class="status"><span></span> ONLINE</div>
+    </header>
+
+    <section class="core-card">
+      <div class="core-orb">玄</div>
+      <div class="core-info">
+        <strong>玄曜核心</strong>
+        <span id="coreState">待命中｜Demo 模式</span>
+      </div>
+      <button id="clearBtn" class="ghost-btn" type="button">清除對話</button>
+    </section>
+
+    <nav class="quick-actions" aria-label="快速功能">
+      <button data-prompt="幫我整理今天最重要的事情">整理今天</button>
+      <button data-prompt="幫我規劃下一步">下一步</button>
+      <button data-prompt="幫我檢查玄曜專案目前還缺什麼">檢查專案</button>
+      <button data-prompt="啟動玄曜最佳化模式">最佳化</button>
+    </nav>
+
+    <section id="chat" class="chat" aria-live="polite"></section>
+
+    <section class="panel">
+      <div class="panel-title">核心能力</div>
+      <div class="grid">
+        <div><b>對話</b><span>已啟用</span></div>
+        <div><b>本機記憶</b><span>已啟用</span></div>
+        <div><b>工具層</b><span>預留</span></div>
+        <div><b>AI 後端</b><span id="backendState">Demo</span></div>
+      </div>
+    </section>
+
+    <form id="composer" class="composer">
+      <textarea id="message" rows="1" placeholder="告訴玄曜你要做什麼…" autocomplete="off"></textarea>
+      <button type="submit" aria-label="送出">➤</button>
+    </form>
+
+    <footer>玄曜 Web 版 1.0 · 手機優先 · 不儲存秘密金鑰</footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
