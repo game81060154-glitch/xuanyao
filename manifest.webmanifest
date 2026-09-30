@@ -7,5 +7,12 @@
   "background_color": "#070b16",
   "theme_color": "#0b1020",
   "description": "玄曜手機優先 AI 工作中樞",
-  "icons": []
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
