@@ -69,6 +69,8 @@
     "backend_health_diagnostics_enabled": true,
     "autonomous_maintenance_audit_enabled": true,
     "continuous_autonomous_mission_enabled": true,
+    "autonomous_ai_task_execution_enabled": true,
+    "autonomous_research_execution_enabled": true,
     "self_code_retry_limit": 3
   },
   "tools": [
@@ -307,7 +309,7 @@
       "id": "research.execute",
       "name": "執行網路查證",
       "scope": "external",
-      "risk": "paid-confirm",
+      "risk": "controlled",
       "enabled": true
     },
     {
@@ -325,6 +327,14 @@
       "risk": "safe",
       "enabled": true,
       "description": "檢查 AI 後端、版本與受控自我修改環境是否可用。"
+    },
+    {
+      "id": "task.ai_execute",
+      "name": "安全 AI 任務執行",
+      "scope": "backend",
+      "risk": "controlled",
+      "enabled": true,
+      "description": "執行低風險 AI 任務；外部高風險操作仍需確認。"
     },
     {
       "id": "system.autonomous_mission",
