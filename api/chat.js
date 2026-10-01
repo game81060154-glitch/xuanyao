@@ -32,8 +32,8 @@ export default async function handler(req, res) {
       }},
       tasks: { type: "array", items: {
         type: "object", additionalProperties: false,
-        properties: { text: { type: "string" }, parentId: { type: "string" } },
-        required: ["text", "parentId"]
+        properties: { text: { type: "string" }, parentId: { type: "string" }, dependsOn: { type: "array", items: { type: "string" } } },
+        required: ["text", "parentId", "dependsOn"]
       }},
       toolRequests: { type: "array", items: {
         type: "object", additionalProperties: false,
@@ -65,9 +65,9 @@ export default async function handler(req, res) {
       parameters: {
         type: "object",
         properties: {
-          text: { type: "string" }, parentId: { type: "string" }
+          text: { type: "string" }, parentId: { type: "string" }, dependsOn: { type: "array", items: { type: "string" } }
         },
-        required: ["text", "parentId"], additionalProperties: false
+        required: ["text", "parentId", "dependsOn"], additionalProperties: false
       }, strict: true
     }
   ];
@@ -112,7 +112,7 @@ export default async function handler(req, res) {
       if (call.name === "xuanyao_create_task") {
         const clean = String(args.text || "").trim().slice(0, 300);
         result = clean
-          ? { accepted: true, action: "task.create", text: clean, parentId: String(args.parentId || "") }
+          ? { accepted: true, action: "task.create", text: clean, parentId: String(args.parentId || ""), dependsOn: Array.isArray(args.dependsOn) ? args.dependsOn.slice(0,8) : [] }
           : { accepted: false, error: "empty_task" };
       }
       if (result.accepted) toolActions.push(result);
