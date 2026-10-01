@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.6";
+const CORE_VERSION = "1.7";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 
 const chat = document.getElementById("chat");
@@ -58,6 +58,32 @@ function routeLocalIntent(text, reply="") {
   return changed;
 }
 function renderMemoryCount() { const el=document.getElementById("memoryCount"); if(el) el.textContent=`記憶 ${memories.length}`; }
+function applyStructuredActions(data, sourceText, reply) {
+  const memoriesFromAI = Array.isArray(data.memories) ? data.memories : [];
+  const tasksFromAI = Array.isArray(data.tasks) ? data.tasks : [];
+  const toolRequests = Array.isArray(data.toolRequests) ? data.toolRequests : [];
+
+  memoriesFromAI.slice(0, 5).forEach(item => {
+    if (item && item.content) saveMemory(item.content, "xuanyao");
+  });
+
+  tasksFromAI.slice(0, 8).forEach(item => {
+    if (item && item.text) createTask(item.text, item.parentId || null);
+  });
+
+  if (toolRequests.length) {
+    const summary = toolRequests.slice(0, 5).map(x =>
+      "• " + (x.toolId || "未知工具") + "｜" + (x.reason || "需要工具處理") +
+      (x.requiresConfirmation ? "｜需你確認" : "")
+    ).join("\n");
+    add("system", "玄曜工具提案（尚未執行）：\n" + summary);
+  }
+
+  if (memoriesFromAI.length || tasksFromAI.length || toolRequests.length) {
+    saveMemory("玄曜本次結構化處理：記憶 " + memoriesFromAI.length +
+      "、任務 " + tasksFromAI.length + "、工具提案 " + toolRequests.length, "xuanyao");
+  }
+}
 function saveMessages() {
   messages = messages.slice(-300);
   writeJSON(KEY, messages);
@@ -129,6 +155,7 @@ async function ask(text) {
     const data = await res.json();
     const reply = data.reply || "後端沒有提供回應。";
     add("system", reply);
+    applyStructuredActions(data, clean, reply);
     routeLocalIntent(clean, reply);
     backendState.textContent = "Connected";
   } catch {
