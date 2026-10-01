@@ -2,7 +2,8 @@ name: Xuanyao Continuous Mission
 
 on:
   schedule:
-    - cron: "7/5 * * * *"
+    - cron: "17/5 * * * *"
+      timezone: "Asia/Taipei"
   workflow_dispatch:
 
 permissions:
@@ -29,8 +30,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo "::warning::OPENAI_API_KEY 尚未設定；玄曜雲端長時間循環尚未啟動。"
-            exit 0
+            echo "::error::OPENAI_API_KEY 尚未設定；玄曜雲端長時間循環無法執行。"
+            exit 1
           fi
 
           python - <<'PY'
