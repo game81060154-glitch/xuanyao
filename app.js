@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.13";
+const CORE_VERSION = "1.14";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -161,6 +161,14 @@ function executeToolActions(toolActions) {
   if (changed) writeJSON(runKey, Array.from(seenSet).slice(-100));
 }
 function applyStructuredActions(data, sourceText, reply) {
+  if (data.assessment || data.decision || (Array.isArray(data.options) && data.options.length)) {
+    const optionText = Array.isArray(data.options) ? data.options.slice(0,5).map(o =>
+      "• " + (o.name || "未知方案") + "｜" + (o.description || "") + "｜風險：" + (o.risk || "未評估") + (o.known === false ? "｜未驗證" : "")
+    ).join("\n") : "";
+    const decisionText = data.decision ? "目前判斷：" + data.decision : "";
+    const assessmentText = data.assessment ? "判斷摘要：" + data.assessment : "";
+    if (assessmentText || optionText || decisionText) add("system", [assessmentText, optionText, decisionText].filter(Boolean).join("\n"));
+  }
   executeToolActions(data.toolActions);
   const memoriesFromAI = Array.isArray(data.memories) ? data.memories : [];
   const tasksFromAI = Array.isArray(data.tasks) ? data.tasks : [];
