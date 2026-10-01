@@ -45,6 +45,8 @@
     "single_change_guard_enabled": true,
     "autonomous_orchestration_enabled": true,
     "goal_over_maintenance_priority_enabled": true,
+    "autonomy_snapshots_enabled": true,
+    "loop_detection_enabled": true,
     "recovery_history_enabled": true
   },
   "tools": [
@@ -59,6 +61,7 @@
     {"id":"system.validate","name":"優化結果驗證","scope":"local","risk":"safe","enabled":true},
     {"id":"system.prioritize","name":"優化優先級判斷","scope":"local","risk":"safe","enabled":true},
     {"id":"system.orchestrate","name":"自主調度","scope":"local","risk":"controlled","enabled":true},
+    {"id":"system.snapshot","name":"自主狀態快照","scope":"local","risk":"safe","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
     {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
