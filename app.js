@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.8";
+const CORE_VERSION = "1.9";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
@@ -100,7 +100,32 @@ function applyApproval(id, status) {
   logActivity(status === "approved" ? "已確認" : "已拒絕", item.toolId + "｜" + item.reason + (status === "approved" ? "｜等待對應外部工具執行" : ""));
 }
 function renderMemoryCount() { const el=document.getElementById("memoryCount"); if(el) el.textContent=`記憶 ${memories.length}`; }
+function executeToolActions(toolActions) {
+  if (!Array.isArray(toolActions) || !toolActions.length) return;
+  const runKey = "xuanyao.toolRuns.v1";
+  const seen = readJSON(runKey, []);
+  const seenSet = new Set(seen);
+  let changed = false;
+
+  toolActions.slice(0, 8).forEach(action => {
+    const fingerprint = JSON.stringify(action);
+    if (seenSet.has(fingerprint)) return;
+    seenSet.add(fingerprint);
+    changed = true;
+
+    if (action.action === "memory.save" && action.content) {
+      saveMemory(action.content, "xuanyao");
+      logActivity("工具完成", "memory.save｜" + action.content);
+    } else if (action.action === "task.create" && action.text) {
+      createTask(action.text, action.parentId || null);
+      logActivity("工具完成", "task.create｜" + action.text);
+    }
+  });
+
+  if (changed) writeJSON(runKey, Array.from(seenSet).slice(-100));
+}
 function applyStructuredActions(data, sourceText, reply) {
+  executeToolActions(data.toolActions);
   const memoriesFromAI = Array.isArray(data.memories) ? data.memories : [];
   const tasksFromAI = Array.isArray(data.tasks) ? data.tasks : [];
   const toolRequests = Array.isArray(data.toolRequests) ? data.toolRequests : [];
@@ -238,7 +263,7 @@ clearBtn.addEventListener("click", () => {
 dataSearch.addEventListener("input", () => { renderData(); renderMemoryTools(); });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
-  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories };
+  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -255,8 +280,11 @@ document.getElementById("importFile").addEventListener("change", async e => {
     if (Array.isArray(payload.messages)) messages = payload.messages;
     if (Array.isArray(payload.tasks)) tasks = payload.tasks;
     if (Array.isArray(payload.memories)) memories = payload.memories;
-    saveMessages(); writeJSON(TASK_KEY, tasks);
-    render(); renderData(); renderTasks();
+    if (Array.isArray(payload.approvals)) approvals = payload.approvals;
+    if (Array.isArray(payload.activities)) activities = payload.activities;
+    saveMessages(); writeJSON(TASK_KEY, tasks); writeJSON(MEMORY_KEY, memories);
+    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities);
+    render(); renderData(); renderTasks(); renderMemoryCount(); renderMemoryTools(); renderApprovals(); renderActivities();
   } catch { alert("匯入失敗：檔案不是有效的玄曜 JSON 備份。"); }
   e.target.value = "";
 });
@@ -286,6 +314,8 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").ca
 render();
 renderData();
 renderTasks();
+renderApprovals();
+renderActivities();
 
 const gatewayInput = document.getElementById("gatewayInput");
 const saveGatewayBtn = document.getElementById("saveGatewayBtn");
@@ -324,10 +354,8 @@ if(clearMemoryBtn) clearMemoryBtn.addEventListener("click",()=>{
 });
 const planTaskBtn=document.getElementById("planTaskBtn");
 if(planTaskBtn) planTaskBtn.addEventListener("click",()=>{
-  const pending=tasks.filter(t=>!t.done).slice(0,5);
+  const pending=tasks.filter(t=>!t.done).slice(0,8);
   if(!pending.length){ alert("目前沒有未完成任務。"); return; }
-  const plan=pending.map((t,i)=>({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+i),text:"執行："+t.text,done:false,at:Date.now(),parentId:t.id}));
-  tasks=[...plan,...tasks]; writeJSON(TASK_KEY,tasks); renderTasks();
-  ask("請依照目前任務幫我安排執行順序與最省力的下一步。");
+  ask("請直接分析目前未完成任務，安排最省力的執行順序；只有真正需要新增的下一步才建立任務，不要重複現有待辦。");
 });
 renderMemoryCount();
