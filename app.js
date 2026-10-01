@@ -4,6 +4,7 @@ const MEMORY_KEY = "xuanyao.memory.v1";
 const CORE_VERSION = "1.44";
 const BACKEND_HEALTH_KEY = "xuanyao.backendHealth.v1";
 const MAINTENANCE_KEY = "xuanyao.maintenance.v1";
+const AUTONOMOUS_MISSION_KEY = "xuanyao.autonomousMission.v1";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -930,6 +931,61 @@ async function checkBackendHealth(){
   }
 }
 
+function getAutonomousMissionState(){
+  return readJSON(AUTONOMOUS_MISSION_KEY,{enabled:true,lastRun:0,running:false,cycles:0,lastStatus:"idle",lastError:"",updatedAt:0});
+}
+function saveAutonomousMissionState(state){ writeJSON(AUTONOMOUS_MISSION_KEY,state); }
+
+async function runAutonomousMissionTick(){
+  const state=getAutonomousMissionState();
+  const now=Date.now();
+  if(!state.enabled || state.running || now-(state.lastRun||0)<30000) return state;
+  if(!goalState?.goal) return {...state,lastStatus:"waiting_for_goal",updatedAt:now};
+  const health=readJSON(BACKEND_HEALTH_KEY,{});
+  const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
+  if(health.reachable===false && gateway==="/api/chat") return {...state,lastStatus:"waiting_for_backend",updatedAt:now};
+
+  const next={...state,running:true,lastRun:now,cycles:Number(state.cycles||0)+1,updatedAt:now};
+  saveAutonomousMissionState(next);
+  coreState.textContent="自主運行中｜玄曜持續推進目標";
+  try{
+    const history=messages.slice(-8).map(x=>({role:x.role==="user"?"user":"assistant",text:x.text}));
+    const payload={
+      message:
+        "玄曜自主任務循環。請依照既定最終目標持續推進，不要因為低風險事項向使用者逐項詢問確認。"+
+        "先檢查目前目標、任務、研究與已有結果；選擇一個最小且可驗證的下一步。"+
+        "可直接使用本機安全工具建立/完成任務與記憶；涉及付款、帳號、授權、不可逆或其他外部高風險操作時，只提出待確認工具請求，不自行執行。"+
+        "不要宣稱尚未完成的工作已完成。若目前沒有必要行動，回報等待原因。",
+      history,
+      context:{
+        autonomous:true,
+        goal:goalState,
+        tasks:getTaskWorkflow().slice(0,20),
+        memories:searchMemories(String(goalState.goal),12).map(m=>({content:m.content,type:m.type,pinned:!!m.pinned})),
+        researchRecords:researchRecords.slice(0,10),
+        pendingApprovals:approvals.filter(a=>a.status==="pending").slice(0,8)
+      }
+    };
+    const res=await fetch(gateway,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data?.error||"autonomous backend");
+    const reply=String(data.reply||"").trim();
+    if(reply) add("system","【自主進度】"+reply);
+    applyStructuredActions(data,payload.message,reply);
+    const updated={...getAutonomousMissionState(),running:false,lastStatus:"progressed",lastError:"",updatedAt:Date.now()};
+    saveAutonomousMissionState(updated);
+    logActivity("自主目標循環","已完成一輪目標檢查與受控推進。");
+    return updated;
+  }catch(error){
+    const updated={...getAutonomousMissionState(),running:false,lastStatus:"error",lastError:String(error?.message||error).slice(0,300),updatedAt:Date.now()};
+    saveAutonomousMissionState(updated);
+    logActivity("自主目標循環失敗",updated.lastError);
+    return updated;
+  }finally{
+    coreState.textContent="待命中｜本機核心";
+  }
+}
+
 function startAutonomousMaintenance(){
   const last=Number(readJSON("xuanyao.selfCodeMaintenance.v1",{last:0}).last||0);
   const now=Date.now();
@@ -937,6 +993,7 @@ function startAutonomousMaintenance(){
   writeJSON("xuanyao.selfCodeMaintenance.v1",{last:now});
   syncSelfCodeCycle().catch(()=>{});
   runMaintenanceAudit().catch(()=>{});
+  runAutonomousMissionTick().catch(()=>{});
 }
 
 function executeGoalLoopLocal(){
@@ -1167,4 +1224,4 @@ runSafeAutomation();
 checkBackendHealth().catch(()=>{});
 runMaintenanceAudit().catch(()=>{});
 startAutonomousMaintenance();
-setInterval(startAutonomousMaintenance,60000);
+setInterval(startAutonomousMaintenance,15000);
