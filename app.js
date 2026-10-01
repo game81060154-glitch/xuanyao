@@ -795,7 +795,29 @@ function runSafeAutomation() {
   else logActivity("自動工作流","目前沒有待處理任務");
   renderAutomationState();
 }
-function executeGoalLoopLocal(){
+const SELF_REPLAN_KEY = "xuanyao.selfCodeReplan.v1";
+function getSelfCodeReplanState(){ return readJSON(SELF_REPLAN_KEY,{attempts:0,last:null,blocked:false}); }
+function saveSelfCodeReplanState(state){ writeJSON(SELF_REPLAN_KEY,state); }
+function prepareSelfCodeReplan(failureReason="",target=""){
+  const state=getSelfCodeReplanState();
+  if(state.blocked) return {ok:false,reason:"自我修復已進入安全停止狀態。"};
+  if(state.attempts>=3){
+    state.blocked=true;
+    state.last={at:Date.now(),reason:"連續自我修復達到 3 次上限。"};
+    saveSelfCodeReplanState(state);
+    logActivity("自我修復安全停止","連續失敗達到上限，暫停自動重新修改。");
+    return {ok:false,reason:"連續自我修復達到 3 次上限。"};
+  }
+  state.attempts+=1;
+  state.last={at:Date.now(),reason:String(failureReason||"驗證失敗"),target:String(target||"")};
+  saveSelfCodeReplanState(state);
+  logActivity("自我修復重新規劃","第 "+state.attempts+" 輪："+state.last.reason);
+  return {ok:true,attempt:state.attempts,target:state.last.target,reason:state.last.reason};
+}
+function resetSelfCodeReplanState(){
+  saveSelfCodeReplanState({attempts:0,last:null,blocked:false});
+}
+\nfunction executeGoalLoopLocal(){
   runSafeAutomation();
   const result=executeNextSafeTask();
   if(!result.ok){
