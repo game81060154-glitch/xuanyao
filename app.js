@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.14";
+const CORE_VERSION = "1.15";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -184,6 +184,14 @@ function executeToolActions(toolActions) {
 }
 function applyStructuredActions(data, sourceText, reply) {
   recordDecision(data);
+  if (Array.isArray(data.options)) {
+    data.options.filter(o => o && o.known === false).slice(0, 5).forEach(o => {
+      const name = String(o.name || "未知方案").trim();
+      if (!name) return;
+      const verifyTask = "驗證未知方案：「" + name + "」｜" + String(o.description || "確認可行性、成本與風險").trim();
+      if (!tasks.some(t => !t.done && t.text === verifyTask)) createTask(verifyTask);
+    });
+  }
   if (data.assessment || data.decision || (Array.isArray(data.options) && data.options.length)) {
     const optionText = Array.isArray(data.options) ? data.options.slice(0,5).map(o =>
       "• " + (o.name || "未知方案") + "｜" + (o.description || "") + "｜風險：" + (o.risk || "未評估") + (o.known === false ? "｜未驗證" : "")
@@ -386,7 +394,7 @@ clearBtn.addEventListener("click", () => {
 dataSearch.addEventListener("input", () => { renderData(); renderMemoryTools(); });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
-  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities };
+  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities, decisions, automation: getAutomationState() };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -405,8 +413,10 @@ document.getElementById("importFile").addEventListener("change", async e => {
     if (Array.isArray(payload.memories)) memories = payload.memories;
     if (Array.isArray(payload.approvals)) approvals = payload.approvals;
     if (Array.isArray(payload.activities)) activities = payload.activities;
+    if (Array.isArray(payload.decisions)) decisions = payload.decisions;
+    if (payload.automation && typeof payload.automation === "object") saveAutomationState(payload.automation);
     saveMessages(); writeJSON(TASK_KEY, tasks); writeJSON(MEMORY_KEY, memories);
-    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities);
+    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities); writeJSON(DECISION_KEY, decisions);
     render(); renderData(); renderTasks(); renderMemoryCount(); renderMemoryTools(); renderApprovals(); renderActivities();
   } catch { alert("匯入失敗：檔案不是有效的玄曜 JSON 備份。"); }
   e.target.value = "";
@@ -439,7 +449,7 @@ render();
 renderData();
 renderTasks();
 renderApprovals();
-renderActivities();
+renderActivities(); renderDecisions();
 
 const gatewayInput = document.getElementById("gatewayInput");
 const saveGatewayBtn = document.getElementById("saveGatewayBtn");
