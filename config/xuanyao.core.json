@@ -97,7 +97,9 @@
     "self_code_replan_dispatch": true,
     "self_code_autonomous_cycle": true,
     "backend_health_diagnostics": true,
-    "autonomous_maintenance_audit": true
+    "autonomous_maintenance_audit": true,
+    "continuous_autonomous_mission": true,
+    "autonomous_mission_state": true
   },
   "memory": {
     "local_storage_key": "xuanyao.memory.v1",
