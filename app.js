@@ -256,7 +256,8 @@ function integrateSelfCodeCycle(base){
   const result={at:Date.now(),mode,goal,system,action};
   const integrated=integrateSelfCodeCycle(result);
   const snapshot=createAutonomySnapshot(result);
-  result.selfCodeCycle=integrated.selfCodeCycle;\n  result.snapshotId=snapshot.id;
+  result.selfCodeCycle=integrated.selfCodeCycle;
+  result.snapshotId=snapshot.id;
   logActivity("自主調度",mode+(action?.text?"｜"+action.text:""));
   return result;
 }
