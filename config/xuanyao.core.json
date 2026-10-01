@@ -94,7 +94,8 @@
     "recovery_history": true,
     "self_code_failure_analysis": true,
     "self_code_bounded_recovery": true,
-    "self_code_replan_dispatch": true
+    "self_code_replan_dispatch": true,
+    "self_code_autonomous_cycle": true
   },
   "memory": {
     "local_storage_key": "xuanyao.memory.v1",
