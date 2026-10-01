@@ -52,6 +52,9 @@
     "goal_recovery_loop": true,
     "goal_management": true,
     "goal_state_review": true,
+    "system_self_audit": true,
+    "autonomous_optimization": true,
+    "optimization_risk_gate": true,
     "recovery_history": true
   },
   "memory": {
