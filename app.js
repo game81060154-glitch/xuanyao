@@ -1,6 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
-const CORE_VERSION = "1.2";
+const CORE_VERSION = "1.4";
+const GATEWAY_KEY = "xuanyao.gateway.v1";
 
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
@@ -78,10 +79,15 @@ async function ask(text) {
   add("user", clean);
   coreState.textContent = "處理中｜分析需求";
   try {
-    const res = await fetch("/api/chat", {
+    const gateway = localStorage.getItem(GATEWAY_KEY) || "/api/chat";
+    const history = messages.slice(-12).map(x => ({
+      role: x.role === "user" ? "user" : "assistant",
+      text: x.text
+    }));
+    const res = await fetch(gateway, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: clean, history: messages.slice(-20) })
+      body: JSON.stringify({ message: clean, history })
     });
     if (!res.ok) throw new Error("backend");
     const data = await res.json();
@@ -90,7 +96,7 @@ async function ask(text) {
   } catch {
     const reply = demoReplies[Math.floor(Math.random() * demoReplies.length)];
     add("system", reply);
-    backendState.textContent = "Demo";
+    backendState.textContent = "Demo｜後端未連線";
   } finally {
     coreState.textContent = "待命中｜本機核心";
   }
@@ -167,3 +173,25 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").ca
 render();
 renderData();
 renderTasks();
+
+const gatewayInput = document.getElementById("gatewayInput");
+const saveGatewayBtn = document.getElementById("saveGatewayBtn");
+if (gatewayInput && saveGatewayBtn) {
+  gatewayInput.value = localStorage.getItem(GATEWAY_KEY) || "";
+  saveGatewayBtn.addEventListener("click", () => {
+    const value = gatewayInput.value.trim();
+    if (!value) {
+      localStorage.removeItem(GATEWAY_KEY);
+      backendState.textContent = "Demo";
+      return;
+    }
+    try {
+      const url = new URL(value);
+      if (!["https:", "http:"].includes(url.protocol)) throw new Error();
+      localStorage.setItem(GATEWAY_KEY, value);
+      backendState.textContent = "Gateway 已設定";
+    } catch {
+      alert("請輸入有效的 AI Gateway 網址。");
+    }
+  });
+}
