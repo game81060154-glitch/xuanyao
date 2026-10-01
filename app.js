@@ -419,13 +419,52 @@ function autonomousAdvance(maxSteps=3){
   logActivity("自主推進",results.map(x=>x.task||x.reason||x.status).join(" → "));
   return {results,nextTask:finalState.nextTask||null};
 }
+async function executeAITask(task){
+  const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
+  const prompt=
+    "玄曜自主執行一項低風險 AI 任務。"+
+    "請只處理任務本身，不執行付款、登入、授權、刪除、發布或其他不可逆外部操作。"+
+    "若資訊不足，明確說明缺口；若可完成，提供可驗證的結果。"+
+    "\n任務："+String(task.text||"");
+  const res=await fetch(gateway,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    message:prompt,
+    history:messages.slice(-6).map(x=>({role:x.role==="user"?"user":"assistant",text:x.text})),
+    context:{autonomousTask:true,goal:goalState?.goal||"",task:{id:task.id,text:task.text}}
+  })});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data?.error||"AI task backend unavailable");
+  const reply=String(data.reply||"").trim();
+  if(!reply) throw new Error("AI task returned no verifiable result");
+  add("system","【自主任務完成】"+reply);
+  applyStructuredActions(data,prompt,reply);
+  return {ok:true,type:"ai",reason:"AI 已回傳可驗證結果"};
+}
+
 function executeNextSafeTask(){
   const state=getAutomationState();
   const next=state.nextTask;
   if(!next) return {ok:false,reason:"目前沒有可執行任務"};
   const task=tasks.find(t=>t.id===next.id);
   if(!task||task.done||task.blocked) return {ok:false,reason:"下一任務已不存在、完成或被阻擋"};
-  const result=executeTaskLocally(task);
+  let result;
+  const taskType=classifyTask(task.text);
+  if(taskType==="research"){
+    const record=researchRecords.find(r=>r && r.question && String(task.text).startsWith("查證："+r.question+"｜") && r.status!=="verified");
+    if(record){
+      await executeResearch(record.id);
+      const refreshed=researchRecords.find(r=>r.id===record.id);
+      result=refreshed?.status==="verified"
+        ? {ok:true,type:"research",reason:"研究結果已取得並寫入紀錄"}
+        : {ok:false,blocked:true,reason:"研究尚未取得可驗證結果"};
+    }else{
+      result={ok:false,blocked:true,reason:"研究任務尚未建立對應查證紀錄"};
+    }
+  }else if(taskType==="needs_ai"){
+    try{ result=await executeAITask(task); }
+    catch(error){ result={ok:false,reason:String(error?.message||error).slice(0,300)}; }
+  }else{
+    result=executeTaskLocally(task);
+  }
   if(result.ok){
     task.lastExecution={at:Date.now(),type:result.type,status:"success",detail:result.reason};
     task.done=true;
