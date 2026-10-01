@@ -1,5 +1,5 @@
 {
-  "version": "1.10",
+  "version": "1.12",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -9,7 +9,10 @@
     "real_tool_execution_enabled": true,
     "tool_result_return_enabled": true,
     "result_validation_enabled": true,
-    "failure_recovery_enabled": true
+    "failure_recovery_enabled": true,
+    "memory_ranking_enabled": true,
+    "workflow_ordering_enabled": true,
+    "error_diagnostics_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
