@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.23";
+const CORE_VERSION = "1.24";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -81,6 +81,41 @@ function executeTaskLocally(task){
   if(type==="research") return {ok:false,blocked:true,reason:"研究任務需要啟動受控網路查證"};
   if(type==="needs_ai") return {ok:false,blocked:true,reason:"需要 AI 推理或外部能力，暫不冒充已執行"};
   return {ok:true,type,reason:"本機安全任務已完成初步執行判定"};
+}
+function replanBlockedTask(task, reason){
+  if(!task) return null;
+  const base=String(task.text||"");
+  const replans=[
+    "重新拆解："+base,
+    "尋找低風險替代方案："+base
+  ];
+  const existing=new Set(tasks.filter(t=>!t.done&&!t.blocked).map(t=>t.text));
+  const candidate=replans.find(x=>!existing.has(x));
+  if(!candidate) return null;
+  const created=createTask(candidate,task.id,[]);
+  logActivity("自主改道",candidate+"｜原因："+reason);
+  return created;
+}
+function autonomousGoalCycle(maxSteps=3){
+  const limit=Math.max(1,Math.min(3,Number(maxSteps)||1));
+  const trace=[];
+  for(let i=0;i<limit;i++){
+    runSafeAutomation();
+    const state=getAutomationState();
+    if(!state.nextTask){ trace.push({status:"idle"}); break; }
+    const task=tasks.find(t=>t.id===state.nextTask.id);
+    const result=executeNextSafeTask();
+    trace.push({task:task?.text||state.nextTask.text,result});
+    if(result.ok) continue;
+    if(result.blocked){
+      const replanned=replanBlockedTask(task,result.reason);
+      if(!replanned) break;
+      runSafeAutomation();
+      continue;
+    }
+    break;
+  }
+  return {trace,nextTask:getAutomationState().nextTask||null};
 }
 function autonomousAdvance(maxSteps=3){
   const limit=Math.max(1,Math.min(3,Number(maxSteps)||1));
