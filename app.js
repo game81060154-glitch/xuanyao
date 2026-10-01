@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.24";
+const CORE_VERSION = "1.25";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -95,6 +95,25 @@ function replanBlockedTask(task, reason){
   const created=createTask(candidate,task.id,[]);
   logActivity("自主改道",candidate+"｜原因："+reason);
   return created;
+}
+function assessGoalLocally(){
+  if(!goalState||!goalState.goal) return {status:"no_goal",reason:"尚未設定目標"};
+  const pending=tasks.filter(t=>!t.done&&!t.blocked);
+  const blocked=tasks.filter(t=>!t.done&&t.blocked);
+  if(pending.length) return {status:"progressing",pending:pending.length,blocked:blocked.length};
+  if(blocked.length) return {status:"blocked",blocked:blocked.length,reason:"目前沒有可安全執行的待辦步驟"};
+  return {status:"needs_review",reason:"目前沒有未完成任務，應重新檢查目標是否已達成或需要新步驟"};
+}
+function manageGoalLocally(){
+  const assessment=assessGoalLocally();
+  logActivity("目標管理",assessment.status+(assessment.reason?"｜"+assessment.reason:""));
+  if(assessment.status==="needs_review"){
+    add("system","玄曜目標管理：目前沒有未完成安全任務。下一步應重新審查目標完成度，而不是自行宣稱已完成。");
+  }
+  if(assessment.status==="blocked"){
+    add("system","玄曜目標管理：目前路徑受阻，已停止盲目重試；需要重新規劃或外部確認。");
+  }
+  return assessment;
 }
 function autonomousGoalCycle(maxSteps=3){
   const limit=Math.max(1,Math.min(3,Number(maxSteps)||1));
