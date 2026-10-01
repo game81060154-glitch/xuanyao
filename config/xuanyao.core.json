@@ -46,6 +46,8 @@
     "goal_satisfaction_review": true,
     "bounded_failure_recovery": true,
     "safe_stop": true,
+    "task_execution_engine": true,
+    "execution_result_validation": true,
     "recovery_history": true
   },
   "memory": {
