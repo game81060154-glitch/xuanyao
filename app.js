@@ -1,7 +1,8 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.42";
+const CORE_VERSION = "1.43";
+const BACKEND_HEALTH_KEY = "xuanyao.backendHealth.v1";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -877,6 +878,40 @@ async function syncSelfCodeCycle(){
   }
 }
 
+async function checkBackendHealth(){
+  const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
+  let base="";
+  try{
+    const url=new URL(gateway,window.location.origin);
+    base=url.origin;
+    const res=await fetch(base+"/api/health",{method:"GET",cache:"no-store"});
+    const data=await res.json().catch(()=>({}));
+    const state={
+      at:Date.now(),
+      reachable:res.ok,
+      status:res.ok?"connected":"unavailable",
+      version:data.version||"",
+      capabilities:data.capabilities||{},
+      error:res.ok?"":(data.error||"HTTP "+res.status)
+    };
+    writeJSON(BACKEND_HEALTH_KEY,state);
+    if(res.ok){
+      backendState.textContent="Backend 已連線｜"+(data.version||"未知版本");
+      logActivity("後端健康檢查","連線正常｜"+(data.version||"未知版本"));
+    }else{
+      backendState.textContent="Backend 不可用｜Demo";
+      logActivity("後端健康檢查",state.error||"後端無法使用");
+    }
+    return state;
+  }catch(error){
+    const state={at:Date.now(),reachable:false,status:"unavailable",version:"",capabilities:{},error:String(error?.message||error)};
+    writeJSON(BACKEND_HEALTH_KEY,state);
+    backendState.textContent="Backend 未連線｜Demo";
+    logActivity("後端健康檢查","目前使用本機 Demo｜"+state.error);
+    return state;
+  }
+}
+
 function startAutonomousMaintenance(){
   const last=Number(readJSON("xuanyao.selfCodeMaintenance.v1",{last:0}).last||0);
   const now=Date.now();
@@ -1110,5 +1145,6 @@ if(planTaskBtn) planTaskBtn.addEventListener("click",()=>{
 renderMemoryCount();
 if(goalInput){goalInput.value=goalState?.goal||""; document.getElementById("saveGoalBtn")?.addEventListener("click",()=>{const g=goalInput.value.trim();if(!g)return;goalState={goal:g,status:"未審查",completion:0,evidence:[],missing:[],nextStep:"",reviewedAt:null};writeJSON(GOAL_KEY,goalState);renderGoal();reviewGoal();});}
 runSafeAutomation();
+checkBackendHealth().catch(()=>{});
 startAutonomousMaintenance();
 setInterval(startAutonomousMaintenance,60000);
