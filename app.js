@@ -176,6 +176,8 @@ function guardAutonomousLoop(){
   return {allowed:false,reason:guard.reason};
 }
 function autonomousOrchestrator(){
+  const guard=guardAutonomousLoop();
+  if(!guard.allowed) return {at:Date.now(),mode:"safe_stop",reason:guard.reason,action:null};
   const goal=manageGoalLocally();
   const system=autonomousSystemManagement();
   const taskState=getAutomationState();
