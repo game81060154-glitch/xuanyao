@@ -93,13 +93,14 @@ jobs:
             "self_code_status_check_enabled",
             "self_code_lifecycle_gate_enabled",
             "self_code_failure_isolation_enabled",
-            "self_code_replan_enabled"
+            "self_code_replan_enabled",
+            "self_code_autonomous_cycle_enabled"
           ];
           for (const key of requiredPolicy) {
             if (tools.policy[key] !== true) throw new Error("Missing tool policy: " + key);
           }
           const ids = new Set(tools.tools.map(x => x.id));
-          for (const id of ["system.self_code_plan","system.self_code_execute","system.self_code_status","system.self_code_replan","system.self_code_lifecycle"]) {
+          for (const id of ["system.self_code_plan","system.self_code_execute","system.self_code_status","system.self_code_replan","system.self_code_lifecycle","system.self_code_autonomous_cycle"]) {
             if (!ids.has(id)) throw new Error("Missing tool: " + id);
           }
           console.log("Self-code lifecycle configuration OK");
