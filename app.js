@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.18";
+const CORE_VERSION = "1.19";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -104,7 +104,7 @@ function saveResearchRecord(item) {
   const question=String(item?.question||"").trim();
   if(!question) return false;
   const now=Date.now();
-  const record={id:String(item.id||makeId()),question,purpose:String(item.purpose||"").trim(),source:String(item.source||"user").trim(),summary:String(item.summary||"").trim(),confidence:String(item.confidence||"unknown").trim(),limitations:String(item.limitations||"").trim(),status:String(item.status||"pending").trim(),sources:Array.isArray(item.sources)?item.sources.slice(0,12):[],verifiedAt:item.verifiedAt||null,createdAt:item.createdAt||now,updatedAt:now};
+  const record={id:String(item.id||makeId()),question,purpose:String(item.purpose||"").trim(),source:String(item.source||"user").trim(),summary:String(item.summary||"").trim(),confidence:String(item.confidence||"unknown").trim(),evidenceQuality:String(item.evidenceQuality||"unknown").trim(),conflictStatus:String(item.conflictStatus||"unknown").trim(),nextQuestion:String(item.nextQuestion||"").trim(),limitations:String(item.limitations||"").trim(),status:String(item.status||"pending").trim(),sources:Array.isArray(item.sources)?item.sources.slice(0,12):[],verifiedAt:item.verifiedAt||null,createdAt:item.createdAt||now,updatedAt:now};
   researchRecords.unshift(record);
   researchRecords=researchRecords.slice(0,200);
   writeJSON(RESEARCH_KEY,researchRecords);
@@ -134,6 +134,9 @@ async function executeResearch(id) {
     record.purpose=data.purpose||record.purpose||"";
     record.summary=String(data.summary||"").trim();
     record.confidence=String(data.confidence||"unknown").trim();
+    record.evidenceQuality=String(data.evidenceQuality||"unknown").trim();
+    record.conflictStatus=String(data.conflictStatus||"unknown").trim();
+    record.nextQuestion=String(data.nextQuestion||"").trim();
     record.limitations=String(data.limitations||"").trim();
     record.status=String(data.status||"unverified").trim();
     record.sources=Array.isArray(data.sources)?data.sources.slice(0,12):[];
@@ -145,6 +148,11 @@ async function executeResearch(id) {
     add("system","玄曜查證完成：\n"+record.summary+(record.limitations?"\n限制："+record.limitations:"")+(record.sources.length?"\n來源："+record.sources.map(s=>s.title||s.url).slice(0,5).join("、"):""));
     const task=tasks.find(t=>!t.done && String(t.text||"").startsWith("查證："+record.question+"｜"));
     if(task) completeTask(task.id);
+    if(record.nextQuestion && !researchRecords.some(r=>r.question===record.nextQuestion && r.status!=="failed")){
+      saveResearchRecord({question:record.nextQuestion,purpose:"釐清目前證據不足之處",status:"planned",summary:"上一輪查證指出仍需最小化追查。",confidence:"unverified"});
+      logActivity("最小追查","已建立下一個必要查證問題");
+    }
+    if(record.conflictStatus && /conflict|矛盾|衝突/i.test(record.conflictStatus)) logActivity("證據衝突","不同來源存在需要重新核對的資訊");
   } catch (err) {
     record.status="failed"; record.limitations=String(err?.message||"研究服務失敗"); record.updatedAt=Date.now();
     writeJSON(RESEARCH_KEY,researchRecords); renderResearch();
@@ -165,7 +173,7 @@ function renderResearch() {
     const action=(r.status==="verified")
       ? "<button type=\"button\" data-reassess=\""+escapeHTML(r.id)+"\">用證據再判斷</button>"
       : "<button type=\"button\" data-research=\""+escapeHTML(r.id)+"\">開始查證</button>";
-    return "<div class=\"activity-item\"><b>"+escapeHTML(r.status||"pending")+"</b><time>"+new Date(r.updatedAt||r.createdAt).toLocaleString()+"</time><p>"+escapeHTML(r.question)+"</p><p>"+escapeHTML(r.summary||"尚無證據摘要")+"｜信心："+escapeHTML(r.confidence||"unknown")+"</p>"+(r.limitations?"<p>限制："+escapeHTML(r.limitations)+"</p>":"")+(links?"<p>來源："+links+"</p>":"")+"<div class=\"approval-actions\">"+action+"</div></div>";
+    return "<div class=\"activity-item\"><b>"+escapeHTML(r.status||"pending")+"</b><time>"+new Date(r.updatedAt||r.createdAt).toLocaleString()+"</time><p>"+escapeHTML(r.question)+"</p><p>"+escapeHTML(r.summary||"尚無證據摘要")+"｜信心："+escapeHTML(r.confidence||"unknown")+"｜品質："+escapeHTML(r.evidenceQuality||"unknown")+"｜衝突："+escapeHTML(r.conflictStatus||"unknown")+"</p>"+(r.limitations?"<p>限制："+escapeHTML(r.limitations)+"</p>":"")+(links?"<p>來源："+links+"</p>":"")+"<div class=\"approval-actions\">"+action+"</div></div>";
   }).join("") || "<div class='empty'>尚無研究證據紀錄。</div>";
 }
 function logActivity(type, text) {
@@ -435,7 +443,7 @@ async function ask(text) {
         history,
         context: {
           memories: searchMemories(clean, 12).map(m => ({ type: m.type, content: m.content, pinned: !!m.pinned })),
-          researchRecords: researchRecords.slice(0, 10).map(r => ({ id:r.id, question:r.question, purpose:r.purpose||"", status:r.status, summary:r.summary, confidence:r.confidence, sources:Array.isArray(r.sources)?r.sources.slice(0,4):[] })),
+          researchRecords: researchRecords.slice(0, 10).map(r => ({ id:r.id, question:r.question, purpose:r.purpose||"", status:r.status, summary:r.summary, confidence:r.confidence, sources:Array.isArray(r.sources)?r.sources.slice(0,4):[], evidenceQuality:r.evidenceQuality||"unknown", conflictStatus:r.conflictStatus||"unknown", nextQuestion:r.nextQuestion||"" })),
           tasks: getTaskWorkflow().slice(0, 12).map(t => ({ id: t.id, text: t.text, done: !!t.done, dependsOn: Array.isArray(t.dependsOn) ? t.dependsOn : [] })),
           pendingApprovals: approvals.filter(a => a.status === "pending").slice(0, 8).map(a => ({ toolId: a.toolId, reason: a.reason }))
         }
