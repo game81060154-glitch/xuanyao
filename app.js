@@ -489,14 +489,20 @@ function runSafeAutomation() {
 }
 function executeGoalLoopLocal(){
   runSafeAutomation();
-  const state=getAutomationState();
-  const next=state.nextTask;
-  if(!next){logActivity("目標循環","目前沒有可安全執行的下一步；需要外部操作或前置條件。");return;}
-  const task=tasks.find(t=>t.id===next.id);
-  if(task) {
-    logActivity("目標循環","已選定最小安全下一步："+task.text);
-    add("system","玄曜目標循環已選定：\n"+task.text+"\n\n這一步已進入安全執行佇列；涉及外部帳號、付款、發布或不可逆操作時仍需確認。");
+  const result=executeNextSafeTask();
+  if(!result.ok){
+    const state=getAutomationState();
+    if(state.nextTask){
+      logActivity("目標循環","下一步未直接完成｜"+result.reason);
+      add("system","玄曜目標循環：\n"+state.nextTask.text+"\n\n狀態："+result.reason);
+    }else{
+      logActivity("目標循環","目前沒有可安全執行的下一步。");
+    }
+    return;
   }
+  runSafeAutomation();
+  const next=getAutomationState().nextTask;
+  logActivity("目標循環",next?"已完成本輪安全執行，下一步："+next.text:"本輪安全執行完成，等待新的任務。");
 }
 function renderMemoryTools() {
   const list = document.getElementById("memoryList");
