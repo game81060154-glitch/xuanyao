@@ -73,9 +73,13 @@ jobs:
           const tools = JSON.parse(fs.readFileSync("config/xuanyao.tools.json", "utf8"));
           if (core.modules.continuous_autonomous_mission !== true) throw new Error("Missing core capability: continuous_autonomous_mission");
           if (core.modules.autonomous_mission_state !== true) throw new Error("Missing core capability: autonomous_mission_state");
-          if (tools.policy.continuous_autonomous_mission_enabled !== true) throw new Error("Missing tool policy: continuous_autonomous_mission_enabled");
+          for (const policy of ["continuous_autonomous_mission_enabled","autonomous_ai_task_execution_enabled","autonomous_research_execution_enabled"]) {
+            if (tools.policy[policy] !== true) throw new Error("Missing tool policy: " + policy);
+          }
           const ids = new Set(tools.tools.map(x => x.id));
-          if (!ids.has("system.autonomous_mission")) throw new Error("Missing tool: system.autonomous_mission");
+          for (const id of ["system.autonomous_mission","task.ai_execute","research.execute"]) {
+            if (!ids.has(id)) throw new Error("Missing tool: " + id);
+          }
           const app = fs.readFileSync("app.js", "utf8");
           for (const marker of ["runAutonomousMissionTick","AUTONOMOUS_MISSION_KEY","autonomousGoalCycle"]) {
             if (!app.includes(marker)) throw new Error("Missing autonomous mission implementation: " + marker);
