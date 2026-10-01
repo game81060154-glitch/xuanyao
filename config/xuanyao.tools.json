@@ -1,5 +1,5 @@
 {
-  "version": "1.42",
+  "version": "1.43",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -66,6 +66,7 @@
     "self_code_bounded_recovery_enabled": true,
     "self_code_replan_dispatch_enabled": true,
     "self_code_autonomous_cycle_enabled": true,
+    "backend_health_diagnostics_enabled": true,
     "self_code_retry_limit": 3
   },
   "tools": [
@@ -306,6 +307,14 @@
       "scope": "external",
       "risk": "paid-confirm",
       "enabled": true
+    },
+    {
+      "id": "system.backend_health",
+      "name": "後端健康檢查",
+      "scope": "backend",
+      "risk": "safe",
+      "enabled": true,
+      "description": "檢查 AI 後端、版本與受控自我修改環境是否可用。"
     },
     {
       "id": "system.self_code_autonomous_cycle",
