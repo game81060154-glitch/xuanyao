@@ -1,0 +1,49 @@
+name: Validate Xuanyao
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xuanyao-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate JSON configuration
+        run: |
+          node -e "for (const f of ['config/xuanyao.core.json','config/xuanyao.memory.schema.json','config/xuanyao.tools.json','vercel.json','manifest.webmanifest']) { JSON.parse(require('fs').readFileSync(f,'utf8')); console.log('OK', f) }"
+
+      - name: Validate JavaScript syntax
+        run: |
+          for f in app.js api/*.js; do
+            node --check "$f"
+          done
+
+      - name: Validate required project files
+        run: |
+          test -f index.html
+          test -f app.js
+          test -f style.css
+          test -f sw.js
+          test -f README.md
+          echo "Required files OK"
+
+      - name: Validate deployment configuration
+        run: |
+          grep -q "actions/deploy-pages@v4" .github/workflows/deploy.yml
+          grep -q "needs: validate" .github/workflows/deploy.yml
+          echo "Deployment gate OK"
