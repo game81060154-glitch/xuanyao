@@ -227,7 +227,8 @@ function integrateSelfCodeCycle(base){
   if(cycle.status==="safe_stop") logActivity("自我修復安全停止",cycle.failure||"已達安全限制。");
   return {...base,selfCodeCycle:cycle};
 }
-\nfunction autonomousOrchestrator(){
+
+function autonomousOrchestrator(){
   const guard=guardAutonomousLoop();
   if(!guard.allowed) {
     const recovered=recoverAutonomyLoop();
@@ -883,7 +884,8 @@ function startAutonomousMaintenance(){
   writeJSON("xuanyao.selfCodeMaintenance.v1",{last:now});
   syncSelfCodeCycle().catch(()=>{});
 }
-\nfunction executeGoalLoopLocal(){
+
+function executeGoalLoopLocal(){
   runSafeAutomation();
   const result=executeNextSafeTask();
   if(!result.ok){
