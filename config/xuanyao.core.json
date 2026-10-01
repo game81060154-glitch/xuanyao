@@ -1,13 +1,14 @@
 {
   "name": "玄曜",
-  "version": "1.5",
+  "version": "1.9",
   "role": "專屬 AI 工作中樞",
   "principles": [
     "先理解目標，再拆解任務",
     "小型工作可自動處理",
     "本機安全工具可自動執行",
     "重要、不可逆、付費或外部權限操作先確認",
-    "保留使用者可查看、匯出與還原的資料"
+    "保留使用者可查看、匯出與還原的資料",
+    "工具執行必須留下結果與紀錄"
   ],
   "modules": {
     "conversation": true,
@@ -16,7 +17,10 @@
     "task_center": true,
     "backend_api": true,
     "tool_layer": true,
-    "automation": "reserved"
+    "tool_execution": true,
+    "approval_gate": true,
+    "activity_log": true,
+    "automation": "next"
   },
   "memory": {
     "local_storage_key": "xuanyao.memory.v1",
