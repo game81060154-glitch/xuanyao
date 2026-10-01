@@ -310,6 +310,14 @@
       "enabled": true
     },
     {
+      "id": "system.maintenance_audit",
+      "name": "自主維護審查",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true,
+      "description": "定期審查核心狀態、發現缺口並產生低風險維護候選。"
+    },
+    {
       "id": "system.backend_health",
       "name": "後端健康檢查",
       "scope": "backend",
