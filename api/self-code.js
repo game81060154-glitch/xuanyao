@@ -71,15 +71,13 @@ export default async function handler(req, res) {
 
   const repo = process.env.GITHUB_REPO || "game81060154-glitch/xuanyao";
   const defaultBranch = process.env.GITHUB_BRANCH || "main";
-  const safeId = `\1790827153460-${Math.random().toString(36).slice(2, 8)}`;
+  const safeId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const branch = `xuanyao/self-change/${safeId}`;
 
   try {
     const ref = await github(`/repos/${repo}/git/ref/heads/${encodeURIComponent(defaultBranch)}`);
     const baseSha = ref.object.sha;
-
     const current = await github(`/repos/${repo}/contents/${target}?ref=${encodeURIComponent(defaultBranch)}`);
-    const originalContent = Buffer.from(current.content || "", "base64").toString("utf8");
 
     await github(`/repos/${repo}/git/refs`, {
       method: "POST",
