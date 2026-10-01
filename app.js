@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.4";
+const CORE_VERSION = "1.5";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 
 const chat = document.getElementById("chat");
@@ -33,7 +33,7 @@ let messages = readJSON(KEY, []);
 let tasks = readJSON(TASK_KEY, []);
 let memories = readJSON(MEMORY_KEY, []);
 
-function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); }
+function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); renderMemoryTools(); }
 function renderMemoryCount() { const el=document.getElementById("memoryCount"); if(el) el.textContent=`記憶 ${memories.length}`; }
 function saveMessages() {
   messages = messages.slice(-300);
@@ -71,6 +71,15 @@ function renderData() {
 }
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function renderMemoryTools() {
+  const list = document.getElementById("memoryList");
+  if (!list) return;
+  const q = (dataSearch.value || "").trim().toLowerCase();
+  const rows = memories.filter(m => !q || (m.content || "").toLowerCase().includes(q)).slice(0, 30);
+  list.innerHTML = rows.length ? rows.map(m =>
+    `<article class="data-item"><b>記憶</b><time>${new Date(m.updatedAt || m.createdAt).toLocaleString()}</time><p>${escapeHTML(m.content)}</p></article>`
+  ).join("") : "<div class='empty'>目前沒有符合的記憶。</div>";
 }
 function renderTasks() {
   taskList.innerHTML = tasks.length ? tasks.map(t =>
@@ -127,7 +136,7 @@ clearBtn.addEventListener("click", () => {
   renderData();
 });
 
-dataSearch.addEventListener("input", renderData);
+dataSearch.addEventListener("input", () => { renderData(); renderMemoryTools(); });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
   const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories };
@@ -208,11 +217,11 @@ if(saveMemoryBtn) saveMemoryBtn.addEventListener("click",()=>{
   const text=(message.value||"").trim();
   if(!text){ alert("先在輸入框寫下要記住的內容。"); return; }
   memories.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),type:"note",content:text,source:"user",createdAt:Date.now(),updatedAt:Date.now(),pinned:false});
-  saveMemories(); message.value=""; message.style.height="auto";
+  saveMemories(); renderMemoryTools(); message.value=""; message.style.height="auto";
 });
 if(clearMemoryBtn) clearMemoryBtn.addEventListener("click",()=>{
   if(!confirm("確定清除玄曜本機記憶？")) return;
-  memories=[]; saveMemories();
+  memories=[]; saveMemories(); renderMemoryTools();
 });
 const planTaskBtn=document.getElementById("planTaskBtn");
 if(planTaskBtn) planTaskBtn.addEventListener("click",()=>{
