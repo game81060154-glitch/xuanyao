@@ -94,6 +94,20 @@ jobs:
           console.log("Autonomous execution async contract OK");
           NODE
 
+      - name: Validate AI task completion guard
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const app = fs.readFileSync("app.js", "utf8");
+          for (const marker of [
+            'data.clarificationNeeded===true',
+            'requiresConfirmation===true',
+            'data.research',
+            'AI task returned incomplete structured result'
+          ]) if (!app.includes(marker)) throw new Error("Missing AI completion guard: " + marker);
+          console.log("AI task completion guard OK");
+          NODE
+
       - name: Validate autonomous mission configuration
         run: |
           node <<'NODE'
