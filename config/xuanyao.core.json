@@ -50,6 +50,8 @@
     "execution_result_validation": true,
     "autonomous_replanning": true,
     "goal_recovery_loop": true,
+    "goal_management": true,
+    "goal_state_review": true,
     "recovery_history": true
   },
   "memory": {
