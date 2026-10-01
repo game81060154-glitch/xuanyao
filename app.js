@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.34";
+const CORE_VERSION = "1.35";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -189,9 +189,31 @@ function guardAutonomousLoop(){
   add("system","玄曜自主防護：偵測到重複決策循環，已暫停原路徑並要求重新規劃。");
   return {allowed:false,reason:guard.reason};
 }
+function evaluateActionGate(action={}) {
+  const risk=String(action.risk||"low").toLowerCase();
+  const external=action.external===true || risk==="high" || risk==="critical";
+  const irreversible=action.irreversible===true;
+  const needsConfirmation=external || irreversible;
+  return {
+    allowed: !needsConfirmation,
+    needsConfirmation,
+    risk,
+    reason: needsConfirmation
+      ? "此操作可能涉及外部權限、高風險或不可逆變更，玄曜先停在確認點。"
+      : "低風險且可逆，可由玄曜繼續處理。"
+  };
+}
+
 function autonomousOrchestrator(){
   const guard=guardAutonomousLoop();
-  if(!guard.allowed) return {at:Date.now(),mode:"safe_stop",reason:guard.reason,action:null};
+  if(!guard.allowed) {
+    const recovered=recoverAutonomyLoop();
+    if (recovered.recovered) {
+      logActivity("自主循環恢復","偵測到重複路徑後清除暫停狀態，重新進入安全決策流程。");
+    } else {
+      return {at:Date.now(),mode:"safe_stop",reason:guard.reason,action:null};
+    }
+  }
   const goal=manageGoalLocally();
   const system=autonomousSystemManagement();
   const taskState=getAutomationState();
