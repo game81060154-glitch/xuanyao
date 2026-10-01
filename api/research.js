@@ -22,9 +22,12 @@ export default async function handler(req, res) {
     properties: {
       summary: { type: "string" },
       confidence: { type: "string" },
+      evidenceQuality: { type: "string" },
+      conflictStatus: { type: "string" },
+      nextQuestion: { type: "string" },
       limitations: { type: "string" }
     },
-    required: ["summary", "confidence", "limitations"]
+    required: ["summary", "confidence", "evidenceQuality", "conflictStatus", "nextQuestion", "limitations"]
   };
 
   const input = [
@@ -36,16 +39,18 @@ export default async function handler(req, res) {
     "1. 優先使用官方、原始資料、學術或高可信來源。",
     "2. 清楚區分已確認、仍有不確定性的資訊。",
     "3. 不要把搜尋到的內容擴大推論成沒有證據支持的結論。",
-    "4. 回傳精簡證據摘要、信心程度與主要限制。",
-    "5. 搜尋完成後保留來源資訊，供玄曜後續重新判斷。"
+    "4. 回傳精簡證據摘要、信心程度、證據品質與主要限制。",
+    "5. 判斷不同來源是否存在明顯矛盾；若有，標記 conflictStatus。",
+    "6. 若證據不足以完成判斷，提出一個最小且具體的 nextQuestion；足夠時留空。",
+    "7. 搜尋完成後保留來源資訊，供玄曜後續重新判斷。"
   ].join("\n");
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
-      tools: [{ type: "web_search", search_context_size: "low" }],
+      model: process.env.OPENAI_RESEARCH_MODEL || process.env.OPENAI_MODEL || "gpt-5.5",
+      tools: [{ type: "web_search" }],
       tool_choice: "auto",
       include: ["web_search_call.action.sources"],
       input,
@@ -75,7 +80,7 @@ export default async function handler(req, res) {
 
   let parsed;
   try { parsed = JSON.parse(data.output_text || "{}"); }
-  catch { parsed = { summary: data.output_text || "已完成搜尋，但未取得結構化摘要。", confidence: "unknown", limitations: "結構化解析失敗。" }; }
+  catch { parsed = { summary: data.output_text || "已完成搜尋，但未取得結構化摘要。", confidence: "unknown", evidenceQuality: "unknown", conflictStatus: "unknown", nextQuestion: "", limitations: "結構化解析失敗。" }; }
 
   const unique = [];
   const seen = new Set();
@@ -86,10 +91,13 @@ export default async function handler(req, res) {
     purpose,
     summary: parsed.summary || "尚無摘要。",
     confidence: parsed.confidence || "unknown",
+    evidenceQuality: parsed.evidenceQuality || "unknown",
+    conflictStatus: parsed.conflictStatus || "unknown",
+    nextQuestion: parsed.nextQuestion || "",
     limitations: parsed.limitations || "",
     status: unique.length ? "verified" : "unverified",
     verifiedAt: unique.length ? Date.now() : null,
     sources: unique.slice(0, 12),
-    model: process.env.OPENAI_MODEL || "gpt-5.6-luna"
+    model: process.env.OPENAI_RESEARCH_MODEL || process.env.OPENAI_MODEL || "gpt-5.5"
   });
 }
