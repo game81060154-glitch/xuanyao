@@ -1,5 +1,5 @@
 {
-  "version": "1.44",
+  "version": "1.45",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -71,6 +71,7 @@
     "continuous_autonomous_mission_enabled": true,
     "autonomous_ai_task_execution_enabled": true,
     "autonomous_research_execution_enabled": true,
+    "mobile_cache_alignment_enabled": true,
     "self_code_retry_limit": 3
   },
   "tools": [
