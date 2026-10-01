@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.17";
+const CORE_VERSION = "1.18";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -103,19 +103,59 @@ function renderDecisions() {
 function saveResearchRecord(item) {
   const question=String(item?.question||"").trim();
   if(!question) return false;
-  const record={id:makeId(),question,source:String(item.source||"user").trim(),summary:String(item.summary||"").trim(),confidence:String(item.confidence||"unknown").trim(),status:String(item.status||"pending").trim(),verifiedAt:item.verifiedAt||null,createdAt:Date.now(),updatedAt:Date.now()};
+  const now=Date.now();
+  const record={id:String(item.id||makeId()),question,purpose:String(item.purpose||"").trim(),source:String(item.source||"user").trim(),summary:String(item.summary||"").trim(),confidence:String(item.confidence||"unknown").trim(),limitations:String(item.limitations||"").trim(),status:String(item.status||"pending").trim(),sources:Array.isArray(item.sources)?item.sources.slice(0,12):[],verifiedAt:item.verifiedAt||null,createdAt:item.createdAt||now,updatedAt:now};
   researchRecords.unshift(record);
   researchRecords=researchRecords.slice(0,200);
   writeJSON(RESEARCH_KEY,researchRecords);
   renderResearch();
   return true;
 }
+async function executeResearch(id) {
+  const record=researchRecords.find(r=>r.id===id);
+  if(!record) return;
+  record.status="researching"; record.updatedAt=Date.now(); writeJSON(RESEARCH_KEY,researchRecords); renderResearch();
+  coreState.textContent="研究中｜玄曜正在查證";
+  try {
+    const res=await fetch("/api/research",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:record.question,purpose:record.purpose||record.source||"驗證未知資訊"})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data?.error||"research");
+    record.purpose=data.purpose||record.purpose||"";
+    record.summary=String(data.summary||"").trim();
+    record.confidence=String(data.confidence||"unknown").trim();
+    record.limitations=String(data.limitations||"").trim();
+    record.status=String(data.status||"unverified").trim();
+    record.sources=Array.isArray(data.sources)?data.sources.slice(0,12):[];
+    record.verifiedAt=data.verifiedAt||null;
+    record.updatedAt=Date.now();
+    writeJSON(RESEARCH_KEY,researchRecords);
+    renderResearch();
+    logActivity("研究完成",record.question+"｜"+record.status+"｜來源 "+record.sources.length+" 筆");
+    add("system","玄曜查證完成：\n"+record.summary+(record.limitations?"\n限制："+record.limitations:"")+(record.sources.length?"\n來源："+record.sources.map(s=>s.title||s.url).slice(0,5).join("、"):""));
+    const task=tasks.find(t=>!t.done && String(t.text||"").startsWith("查證："+record.question+"｜"));
+    if(task) completeTask(task.id);
+  } catch (err) {
+    record.status="failed"; record.limitations=String(err?.message||"研究服務失敗"); record.updatedAt=Date.now();
+    writeJSON(RESEARCH_KEY,researchRecords); renderResearch();
+    logActivity("研究失敗",record.question+"｜"+record.limitations);
+  } finally {
+    coreState.textContent="待命中｜本機核心";
+  }
+}
 function renderResearch() {
   const el=document.getElementById("researchList");
   if(!el) return;
-  el.innerHTML=researchRecords.slice(0,20).map(r=>
-    `<div class="activity-item"><b>${escapeHTML(r.status||"pending")}</b><time>${new Date(r.updatedAt||r.createdAt).toLocaleString()}</time><p>${escapeHTML(r.question)}</p><p>${escapeHTML(r.summary||"尚無證據摘要")}｜信心：${escapeHTML(r.confidence||"unknown")}</p></div>`
-  ).join("") || "<div class='empty'>尚無研究證據紀錄。</div>";
+  el.innerHTML=researchRecords.slice(0,20).map(r=>{
+    const links=(Array.isArray(r.sources)?r.sources:[]).slice(0,4).map(s=>{
+      const url=String(s?.url||"");
+      if(!/^https?:\\/\\//i.test(url)) return "";
+      return "<a href=\""+escapeHTML(url)+"\" target=\"_blank\" rel=\"noopener noreferrer\">"+escapeHTML(s.title||url)+"</a>";
+    }).filter(Boolean).join(" · ");
+    const action=(r.status==="verified")
+      ? "<button type=\"button\" data-reassess=\""+escapeHTML(r.id)+"\">用證據再判斷</button>"
+      : "<button type=\"button\" data-research=\""+escapeHTML(r.id)+"\">開始查證</button>";
+    return "<div class=\"activity-item\"><b>"+escapeHTML(r.status||"pending")+"</b><time>"+new Date(r.updatedAt||r.createdAt).toLocaleString()+"</time><p>"+escapeHTML(r.question)+"</p><p>"+escapeHTML(r.summary||"尚無證據摘要")+"｜信心："+escapeHTML(r.confidence||"unknown")+"</p>"+(r.limitations?"<p>限制："+escapeHTML(r.limitations)+"</p>":"")+(links?"<p>來源："+links+"</p>":"")+"<div class=\"approval-actions\">"+action+"</div></div>";
+  }).join("") || "<div class='empty'>尚無研究證據紀錄。</div>";
 }
 function logActivity(type, text) {
   activities.unshift({ id: makeId(), type, text: String(text || ""), at: Date.now() });
@@ -384,6 +424,7 @@ async function ask(text) {
         history,
         context: {
           memories: searchMemories(clean, 12).map(m => ({ type: m.type, content: m.content, pinned: !!m.pinned })),
+          researchRecords: researchRecords.slice(0, 10).map(r => ({ id:r.id, question:r.question, purpose:r.purpose||"", status:r.status, summary:r.summary, confidence:r.confidence, sources:Array.isArray(r.sources)?r.sources.slice(0,4):[] })),
           tasks: getTaskWorkflow().slice(0, 12).map(t => ({ id: t.id, text: t.text, done: !!t.done, dependsOn: Array.isArray(t.dependsOn) ? t.dependsOn : [] })),
           pendingApprovals: approvals.filter(a => a.status === "pending").slice(0, 8).map(a => ({ toolId: a.toolId, reason: a.reason }))
         }
@@ -466,6 +507,16 @@ taskForm.addEventListener("submit", e => {
   writeJSON(TASK_KEY, tasks);
   taskInput.value = "";
   renderTasks();
+});
+const researchList=document.getElementById("researchList");
+if(researchList) researchList.addEventListener("click", e => {
+  const researchId=e.target.dataset.research||e.target.dataset.reassess;
+  if(!researchId) return;
+  if(e.target.dataset.research){ executeResearch(researchId); return; }
+  if(e.target.dataset.reassess){
+    const record=researchRecords.find(r=>r.id===researchId);
+    if(record) ask("請根據玄曜研究證據重新判斷目前方案與下一步。研究問題："+record.question+"；摘要："+record.summary+"；信心："+record.confidence+"；限制："+(record.limitations||"無"));
+  }
 });
 taskList.addEventListener("click", e => {
   const id = e.target.dataset.task || e.target.dataset.delete;
