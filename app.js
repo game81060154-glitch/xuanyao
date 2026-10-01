@@ -9,6 +9,7 @@ const ACTIVITY_KEY = "xuanyao.activity.v1";
 const DECISION_KEY = "xuanyao.decisions.v1";
 const TOOL_RUN_KEY = "xuanyao.toolRuns.v1";
 const RESEARCH_KEY = "xuanyao.research.v1";
+const GOAL_KEY = "xuanyao.goal.v1";
 
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
@@ -21,6 +22,7 @@ const dataList = document.getElementById("dataList");
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
 const taskList = document.getElementById("taskList");
+const goalInput = document.getElementById("goalInput");
 
 const demoReplies = [
   "收到。玄曜已接管這項任務，先拆解目標，再把需要你決定的部分留給你。",
@@ -42,6 +44,7 @@ let approvals = readJSON(APPROVAL_KEY, []);
 let activities = readJSON(ACTIVITY_KEY, []);
 let decisions = readJSON(DECISION_KEY, []);
 let researchRecords = readJSON(RESEARCH_KEY, []);
+let goalState = readJSON(GOAL_KEY, null);
 
 function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); renderMemoryTools(); }
 function makeId() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
@@ -110,6 +113,29 @@ function saveResearchRecord(item) {
   writeJSON(RESEARCH_KEY,researchRecords);
   renderResearch();
   return true;
+}
+async function reviewGoal(){
+  const goal=String(goalState?.goal||"").trim();
+  if(!goal){ add("system","請先設定一個真正想達成的目標。"); return; }
+  coreState.textContent="目標審查中｜玄曜正在判斷";
+  try{
+    const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
+    let endpoint="/api/goal";
+    if(/^https?:\\/\\//i.test(gateway)){try{const u=new URL(gateway);if(/\\/api\\/chat\\/?$/.test(u.pathname))u.pathname=u.pathname.replace(/\\/api\\/chat\\/?$/,"/api/goal");endpoint=u.toString();}catch{}}
+    const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({goal,tasks,researchRecords})});
+    const data=await res.json(); if(!res.ok)throw new Error(data?.error||"goal review");
+    goalState={...goalState,...data,goal}; writeJSON(GOAL_KEY,goalState); renderGoal();
+    add("system","目標審查： "+data.status+"｜完成度 "+data.completion+"%\n"+(data.evidence||[]).map(x=>"• "+x).join("\n")+(data.missing?.length?"\n尚缺：\n"+data.missing.map(x=>"• "+x).join("\n"):"")+"\n下一步："+data.nextStep);
+    logActivity("目標審查",goal+"｜"+data.status+"｜"+data.completion+"%");
+    if(data.nextStep && data.status!=="已達成" && !tasks.some(t=>!t.done&&t.text===data.nextStep)) createTask(data.nextStep);
+  }catch(err){logActivity("目標審查失敗",String(err?.message||err));}
+  finally{coreState.textContent="待命中｜本機核心";}
+}
+function renderGoal(){
+  const el=document.getElementById("goalState"); if(!el)return;
+  if(!goalState?.goal){el.innerHTML="<div class='empty'>尚未設定目標。</div>";return;}
+  el.innerHTML="<div class='activity-item'><b>"+escapeHTML(goalState.status||"待審查")+"｜"+escapeHTML(String(goalState.completion??0))+"%</b><p>"+escapeHTML(goalState.goal)+"</p><p>"+escapeHTML(goalState.nextStep||"尚無下一步")+"</p><button type='button' id='reviewGoalBtn'>重新審查</button></div>";
+  const b=document.getElementById("reviewGoalBtn");if(b)b.addEventListener("click",reviewGoal);
 }
 function getResearchGateway(){
   const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
@@ -489,7 +515,7 @@ clearBtn.addEventListener("click", () => {
 dataSearch.addEventListener("input", () => { renderData(); renderMemoryTools(); });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
-  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities, decisions, researchRecords, automation: getAutomationState() };
+  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities, decisions, researchRecords, automation: getAutomationState(), goalState };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -510,9 +536,10 @@ document.getElementById("importFile").addEventListener("change", async e => {
     if (Array.isArray(payload.activities)) activities = payload.activities;
     if (Array.isArray(payload.decisions)) decisions = payload.decisions;
     if (Array.isArray(payload.researchRecords)) researchRecords = payload.researchRecords;
+    if (payload.goalState && typeof payload.goalState === "object") goalState = payload.goalState;
     if (payload.automation && typeof payload.automation === "object") saveAutomationState(payload.automation);
     saveMessages(); writeJSON(TASK_KEY, tasks); writeJSON(MEMORY_KEY, memories);
-    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities); writeJSON(DECISION_KEY, decisions); writeJSON(RESEARCH_KEY, researchRecords);
+    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities); writeJSON(DECISION_KEY, decisions); writeJSON(RESEARCH_KEY, researchRecords); writeJSON(GOAL_KEY, goalState);
     render(); renderData(); renderTasks(); renderMemoryCount(); renderMemoryTools(); renderApprovals(); renderActivities();
   } catch { alert("匯入失敗：檔案不是有效的玄曜 JSON 備份。"); }
   e.target.value = "";
@@ -555,7 +582,7 @@ render();
 renderData();
 renderTasks();
 renderApprovals();
-renderActivities(); renderDecisions(); renderResearch();
+renderActivities(); renderDecisions(); renderResearch(); renderGoal();
 
 const gatewayInput = document.getElementById("gatewayInput");
 const saveGatewayBtn = document.getElementById("saveGatewayBtn");
@@ -599,4 +626,5 @@ if(planTaskBtn) planTaskBtn.addEventListener("click",()=>{
   ask("請直接分析目前未完成任務，安排最省力的執行順序；只有真正需要新增的下一步才建立任務，不要重複現有待辦。");
 });
 renderMemoryCount();
+if(goalInput){goalInput.value=goalState?.goal||""; document.getElementById("saveGoalBtn")?.addEventListener("click",()=>{const g=goalInput.value.trim();if(!g)return;goalState={goal:g,status:"未審查",completion:0,evidence:[],missing:[],nextStep:"",reviewedAt:null};writeJSON(GOAL_KEY,goalState);renderGoal();reviewGoal();});}
 runSafeAutomation();
