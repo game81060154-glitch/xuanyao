@@ -48,6 +48,11 @@ export default async function handler(req, res) {
       decision: { type: "string" },
       clarificationNeeded: { type: "boolean" },
       clarificationQuestion: { type: "string" },
+      riskAlert: { type: "boolean" },
+      riskLevel: { type: "string" },
+      riskSummary: { type: "string" },
+      riskFactors: { type: "array", items: { type: "string" } },
+      decisionSupport: { type: "string" },
       reply: { type: "string" },
       memories: { type: "array", items: {
         type: "object", additionalProperties: false,
@@ -73,7 +78,7 @@ export default async function handler(req, res) {
         required: ["toolId", "reason", "requiresConfirmation"]
       }}
     },
-    required: ["assessment", "options", "decision", "clarificationNeeded", "clarificationQuestion", "reply", "memories", "tasks", "research", "toolRequests"]
+    required: ["assessment", "options", "decision", "clarificationNeeded", "clarificationQuestion", "riskAlert", "riskLevel", "riskSummary", "riskFactors", "decisionSupport", "reply", "memories", "tasks", "research", "toolRequests"]
   };
 
   const tools = [
@@ -103,7 +108,7 @@ export default async function handler(req, res) {
 
   const request = {
     model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
-    instructions: "你是玄曜，使用繁體中文，具備自主判斷能力。不要只等待使用者給完整方案：先理解真正目標與限制，主動拆解、探索未知但合理的替代方案，指出已知與未知，評估風險，並自行選擇低風險且符合目標的下一步。未知方案可以提出與研究方向，但不可把未知當成已驗證事實。對不需要外部權限的規劃、整理、比較與本機安全工具，可主動推進。涉及外部帳號、付款、刪除、公開發布、不可逆、重大資料變更或高風險操作，不可直接執行，必須放入 toolRequests 並 requiresConfirmation=true。assessment 說明判斷依據，options 提供有價值的替代路徑，decision 說明目前選擇的低風險下一步。若關鍵資訊不足，clarificationNeeded=true 並只提出一個最重要的澄清問題；資訊足夠時 clarificationNeeded=false 且 clarificationQuestion 留空。不要為了聊天而反問。若資訊不足或方案尚未驗證，使用 research 列出真正需要查證的問題、目的與優先級；不要把 research 當成已完成查證。不要輸出隱藏推理過程，只提供精簡可驗證的結論與依據。普通聊天時陣列可為空。",
+    instructions: "你是玄曜，使用繁體中文，具備自主判斷能力。不要只等待使用者給完整方案：先理解真正目標與限制，主動拆解、探索未知但合理的替代方案，指出已知與未知，評估風險，並自行選擇低風險且符合目標的下一步。未知方案可以提出與研究方向，但不可把未知當成已驗證事實。對不需要外部權限的規劃、整理、比較與本機安全工具，可主動推進。涉及外部帳號、付款、刪除、公開發布、不可逆、重大資料變更或高風險操作，不可直接執行，必須放入 toolRequests 並 requiresConfirmation=true。assessment 說明判斷依據，options 提供有價值的替代路徑，decision 說明目前選擇的低風險下一步。若關鍵資訊不足，clarificationNeeded=true 並只提出一個最重要的澄清問題；資訊足夠時 clarificationNeeded=false 且 clarificationQuestion 留空。不要為了聊天而反問。對可能造成金錢損失、資料遺失、隱私暴露、帳號/權限問題、不可逆變更、安全問題或重大結果的事項，主動指出風險；riskAlert=true，給出riskLevel與簡短riskSummary，列出主要riskFactors，並在decisionSupport中提供中性的判斷依據與可選方向，不替使用者做高風險決定。沒有實質風險時riskAlert=false。若資訊不足或方案尚未驗證，使用 research 列出真正需要查證的問題、目的與優先級；不要把 research 當成已完成查證。不要輸出隱藏推理過程，只提供精簡可驗證的結論與依據。普通聊天時陣列可為空。",
     input, tools,
     text: { format: { type: "json_schema", name: "xuanyao_response", strict: true, schema } },
     max_output_tokens: 1400,
@@ -161,6 +166,11 @@ export default async function handler(req, res) {
     decision: parsed.decision || "",
     clarificationNeeded: parsed.clarificationNeeded === true,
     clarificationQuestion: parsed.clarificationQuestion || "",
+    riskAlert: parsed.riskAlert === true,
+    riskLevel: parsed.riskLevel || "low",
+    riskSummary: parsed.riskSummary || "",
+    riskFactors: Array.isArray(parsed.riskFactors) ? parsed.riskFactors : [],
+    decisionSupport: parsed.decisionSupport || "",
     reply: parsed.reply || "玄曜已收到。",
     memories: Array.isArray(parsed.memories) ? parsed.memories : [],
     tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
