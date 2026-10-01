@@ -1,0 +1,12 @@
+{
+  "version":"1.0",
+  "item":{
+    "id":"string",
+    "type":"preference|fact|project|decision|task|note",
+    "content":"string",
+    "source":"user|xuanyao",
+    "createdAt":"ISO-8601",
+    "updatedAt":"ISO-8601",
+    "pinned":"boolean"
+  }
+}
