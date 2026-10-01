@@ -78,6 +78,22 @@ jobs:
           console.log("Version consistency OK:", core.version);
           NODE
 
+      - name: Validate autonomous execution syntax contract
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const app = fs.readFileSync("app.js", "utf8");
+          const required = [
+            "async function autonomousGoalCycle",
+            "async function autonomousAdvance",
+            "async function executeNextSafeTask",
+            "await executeNextSafeTask()",
+            "await autonomousGoalCycle(3)"
+          ];
+          for (const marker of required) if (!app.includes(marker)) throw new Error("Missing async execution contract: " + marker);
+          console.log("Autonomous execution async contract OK");
+          NODE
+
       - name: Validate autonomous mission configuration
         run: |
           node <<'NODE'
