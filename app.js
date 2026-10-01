@@ -5,6 +5,7 @@ const CORE_VERSION = "1.9";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
+const TOOL_RUN_KEY = "xuanyao.toolRuns.v1";
 
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
@@ -45,11 +46,24 @@ function saveMemory(text, source="xuanyao") {
   memories.unshift({id:makeId(),type:"note",content:clean,source,createdAt:Date.now(),updatedAt:Date.now(),pinned:false});
   saveMemories(); return true;
 }
-function createTask(text, parentId=null) {
+function createTask(text, parentId=null, dependsOn=[]) {
   const clean=String(text||"").trim();
   if(!clean) return false;
-  tasks.unshift({id:makeId(),text:clean,done:false,at:Date.now(),parentId});
+  const deps=Array.isArray(dependsOn)?dependsOn.filter(Boolean).slice(0,8):[];
+  tasks.unshift({id:makeId(),text:clean,done:false,at:Date.now(),parentId,dependsOn:deps});
   writeJSON(TASK_KEY,tasks); renderTasks(); return true;
+}
+function canCompleteTask(task) {
+  const deps=Array.isArray(task.dependsOn)?task.dependsOn:[];
+  return deps.every(id => { const dep=tasks.find(t=>t.id===id); return !dep || dep.done; });
+}
+function completeTask(id) {
+  const task=tasks.find(t=>t.id===id);
+  if(!task) return;
+  if(!canCompleteTask(task)){ logActivity("任務阻擋","尚有前置任務未完成｜"+task.text); return; }
+  task.done=!task.done; task.completedAt=task.done?Date.now():null;
+  writeJSON(TASK_KEY,tasks); renderTasks();
+  logActivity(task.done?"任務完成":"任務重開",task.text);
 }
 function routeLocalIntent(text, reply="") {
   const lower=String(text).toLowerCase();
@@ -102,7 +116,7 @@ function applyApproval(id, status) {
 function renderMemoryCount() { const el=document.getElementById("memoryCount"); if(el) el.textContent=`記憶 ${memories.length}`; }
 function executeToolActions(toolActions) {
   if (!Array.isArray(toolActions) || !toolActions.length) return;
-  const runKey = "xuanyao.toolRuns.v1";
+  const runKey = TOOL_RUN_KEY;
   const seen = readJSON(runKey, []);
   const seenSet = new Set(seen);
   let changed = false;
@@ -117,7 +131,7 @@ function executeToolActions(toolActions) {
       saveMemory(action.content, "xuanyao");
       logActivity("工具完成", "memory.save｜" + action.content);
     } else if (action.action === "task.create" && action.text) {
-      createTask(action.text, action.parentId || null);
+      createTask(action.text, action.parentId || null, action.dependsOn || []);
       logActivity("工具完成", "task.create｜" + action.text);
     }
   });
@@ -135,7 +149,7 @@ function applyStructuredActions(data, sourceText, reply) {
   });
 
   tasksFromAI.slice(0, 8).forEach(item => {
-    if (item && item.text) createTask(item.text, item.parentId || null);
+    if (item && item.text && !tasks.some(t => !t.done && t.text === item.text)) createTask(item.text, item.parentId || null, item.dependsOn || []);
   });
 
   if (toolRequests.length) {
@@ -302,7 +316,8 @@ taskList.addEventListener("click", e => {
   const id = e.target.dataset.task || e.target.dataset.delete;
   if (!id) return;
   if (e.target.dataset.task) {
-    tasks = tasks.map(t => t.id === id ? {...t, done:!t.done} : t);
+    completeTask(id);
+    return;
   } else {
     tasks = tasks.filter(t => t.id !== id);
   }
