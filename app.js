@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.19";
+const CORE_VERSION = "1.21";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -428,11 +428,23 @@ function runSafeAutomation() {
   state.enabled=true;
   state.lastRun=Date.now();
   state.queue=ready.map(t=>({taskId:t.id,text:t.text,readyAt:Date.now()}));
+  state.nextTask=ready[0]?{id:ready[0].id,text:ready[0].text}:null;
   saveAutomationState(state);
   if(ready.length) logActivity("自動工作流","已整理可安全處理佇列："+ready.map(t=>t.text).join("｜"));
   else if(tasks.some(t=>!t.done)) logActivity("自動工作流","目前任務均受前置條件限制，未執行未知或外部操作");
   else logActivity("自動工作流","目前沒有待處理任務");
   renderAutomationState();
+}
+function executeGoalLoopLocal(){
+  runSafeAutomation();
+  const state=getAutomationState();
+  const next=state.nextTask;
+  if(!next){logActivity("目標循環","目前沒有可安全執行的下一步；需要外部操作或前置條件。");return;}
+  const task=tasks.find(t=>t.id===next.id);
+  if(task) {
+    logActivity("目標循環","已選定最小安全下一步："+task.text);
+    add("system","玄曜目標循環已選定：\n"+task.text+"\n\n這一步已進入安全執行佇列；涉及外部帳號、付款、發布或不可逆操作時仍需確認。");
+  }
 }
 function renderMemoryTools() {
   const list = document.getElementById("memoryList");
@@ -620,6 +632,8 @@ if(clearMemoryBtn) clearMemoryBtn.addEventListener("click",()=>{
   memories=[]; saveMemories(); renderMemoryTools();
 });
 const planTaskBtn=document.getElementById("planTaskBtn");
+const goalLoopBtn=document.getElementById("goalLoopBtn");
+if(goalLoopBtn) goalLoopBtn.addEventListener("click",executeGoalLoopLocal);
 if(planTaskBtn) planTaskBtn.addEventListener("click",()=>{
   const pending=tasks.filter(t=>!t.done).slice(0,8);
   if(!pending.length){ alert("目前沒有未完成任務。"); return; }
