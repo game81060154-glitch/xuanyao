@@ -1,0 +1,17 @@
+{
+  "version": "1.5",
+  "name": "玄曜工具層",
+  "policy": {
+    "local_safe_tools_auto_run": true,
+    "external_tools_require_confirmation": true,
+    "paid_or_irreversible_actions_require_confirmation": true
+  },
+  "tools": [
+    {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
+    {"id":"memory.search","name":"搜尋記憶","scope":"local","risk":"safe","enabled":true},
+    {"id":"task.create","name":"建立任務","scope":"local","risk":"safe","enabled":true},
+    {"id":"task.complete","name":"完成任務","scope":"local","risk":"safe","enabled":true},
+    {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
+    {"id":"external.request","name":"外部工具請求","scope":"external","risk":"confirm","enabled":true}
+  ]
+}
