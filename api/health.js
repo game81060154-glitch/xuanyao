@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     status: "ok",
     service: "xuanyao",
-    version: "1.44",
+    version: "1.45",
     runtime: "vercel",
     capabilities: {
       chat: true,
