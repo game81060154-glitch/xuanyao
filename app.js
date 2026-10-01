@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.29";
+const CORE_VERSION = "1.30";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -139,6 +139,23 @@ function selectSafeOptimization(proposals){
   if(!selected) return {selected:null,ranked};
   logActivity("優化選擇","選定："+selected.type+"｜優先度："+selected.priority);
   return {selected,ranked};
+}
+function createAutonomySnapshot(orchestration){
+  const snapshot={
+    id:makeId("auto"),
+    at:Date.now(),
+    version:CORE_VERSION,
+    mode:orchestration?.mode||"unknown",
+    action:orchestration?.action||null,
+    goal:goalState?.goal||null,
+    pendingTasks:tasks.filter(t=>!t.done&&!t.blocked).length,
+    blockedTasks:tasks.filter(t=>!t.done&&t.blocked).length
+  };
+  const key="xuanyao.autonomy.v1";
+  const history=readJSON(key,[]);
+  history.unshift(snapshot);
+  writeJSON(key,history.slice(0,100));
+  return snapshot;
 }
 function autonomousOrchestrator(){
   const goal=manageGoalLocally();
