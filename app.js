@@ -3,6 +3,7 @@ const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
 const CORE_VERSION = "1.43";
 const BACKEND_HEALTH_KEY = "xuanyao.backendHealth.v1";
+const MAINTENANCE_KEY = "xuanyao.maintenance.v1";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -878,6 +879,23 @@ async function syncSelfCodeCycle(){
   }
 }
 
+function getMaintenanceState(){
+  return readJSON(MAINTENANCE_KEY,{lastRun:0,lastStatus:"idle",lastFindingCount:0,consecutiveFailures:0,updatedAt:0});
+}
+function saveMaintenanceState(state){ writeJSON(MAINTENANCE_KEY,state); }
+async function runMaintenanceAudit(){
+  const state=getMaintenanceState();
+  const now=Date.now();
+  if(now-(state.lastRun||0)<30000) return state;
+  const audit=auditSystemLocally();
+  const proposals=proposeSystemOptimization(audit);
+  const safe=selectSafeOptimization(proposals);
+  const next={...state,lastRun:now,lastStatus:"audited",lastFindingCount:audit.findings.length,lastSelection:safe.selected?.type||null,updatedAt:now};
+  saveMaintenanceState(next);
+  logActivity("玄曜維護審查",audit.findings.length?audit.findings.join("｜"):"目前沒有新的核心缺口");
+  return next;
+}
+
 async function checkBackendHealth(){
   const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
   let base="";
@@ -918,6 +936,7 @@ function startAutonomousMaintenance(){
   if(now-last<30000) return;
   writeJSON("xuanyao.selfCodeMaintenance.v1",{last:now});
   syncSelfCodeCycle().catch(()=>{});
+  runMaintenanceAudit().catch(()=>{});
 }
 
 function executeGoalLoopLocal(){
@@ -1146,5 +1165,6 @@ renderMemoryCount();
 if(goalInput){goalInput.value=goalState?.goal||""; document.getElementById("saveGoalBtn")?.addEventListener("click",()=>{const g=goalInput.value.trim();if(!g)return;goalState={goal:g,status:"未審查",completion:0,evidence:[],missing:[],nextStep:"",reviewedAt:null};writeJSON(GOAL_KEY,goalState);renderGoal();reviewGoal();});}
 runSafeAutomation();
 checkBackendHealth().catch(()=>{});
+runMaintenanceAudit().catch(()=>{});
 startAutonomousMaintenance();
 setInterval(startAutonomousMaintenance,60000);
