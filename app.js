@@ -111,13 +111,24 @@ function saveResearchRecord(item) {
   renderResearch();
   return true;
 }
+function getResearchGateway(){
+  const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
+  if(/^https?:\\/\\//i.test(gateway)){
+    try{
+      const url=new URL(gateway);
+      if(/\\/api\\/chat\\/?$/.test(url.pathname)) url.pathname=url.pathname.replace(/\\/api\\/chat\\/?$/,"/api/research");
+      return url.toString();
+    }catch{}
+  }
+  return "/api/research";
+}
 async function executeResearch(id) {
   const record=researchRecords.find(r=>r.id===id);
   if(!record) return;
   record.status="researching"; record.updatedAt=Date.now(); writeJSON(RESEARCH_KEY,researchRecords); renderResearch();
   coreState.textContent="研究中｜玄曜正在查證";
   try {
-    const res=await fetch("/api/research",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:record.question,purpose:record.purpose||record.source||"驗證未知資訊"})});
+    const res=await fetch(getResearchGateway(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:record.question,purpose:record.purpose||record.source||"驗證未知資訊"})});
     const data=await res.json();
     if(!res.ok) throw new Error(data?.error||"research");
     record.purpose=data.purpose||record.purpose||"";
