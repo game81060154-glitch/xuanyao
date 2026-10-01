@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.21";
+const CORE_VERSION = "1.23";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -65,6 +65,41 @@ function createTask(text, parentId=null, dependsOn=[]) {
 function canCompleteTask(task) {
   const deps=Array.isArray(task.dependsOn)?task.dependsOn:[];
   return deps.every(id => { const dep=tasks.find(t=>t.id===id); return Boolean(dep) && dep.done; });
+}
+function classifyTask(text){
+  const s=String(text||"");
+  if(/^查證：/.test(s)) return "research";
+  if(/記住|記錄|保存|匯出|備份/.test(s)) return "local";
+  if(/付款|購買|發布|刪除|登入|授權|寄送/.test(s)) return "external_confirm";
+  if(/整理|分析|規劃|建立任務|檢查|比較/.test(s)) return "local";
+  return "needs_ai";
+}
+function executeTaskLocally(task){
+  if(!task) return {ok:false,reason:"找不到任務"};
+  const type=classifyTask(task.text);
+  if(type==="external_confirm") return {ok:false,blocked:true,reason:"此任務涉及外部、付款、授權或不可逆操作，需要確認"};
+  if(type==="research") return {ok:false,blocked:true,reason:"研究任務需要啟動受控網路查證"};
+  if(type==="needs_ai") return {ok:false,blocked:true,reason:"需要 AI 推理或外部能力，暫不冒充已執行"};
+  return {ok:true,type,reason:"本機安全任務已完成初步執行判定"};
+}
+function executeNextSafeTask(){
+  const state=getAutomationState();
+  const next=state.nextTask;
+  if(!next) return {ok:false,reason:"目前沒有可執行任務"};
+  const task=tasks.find(t=>t.id===next.id);
+  if(!task||task.done||task.blocked) return {ok:false,reason:"下一任務已不存在、完成或被阻擋"};
+  const result=executeTaskLocally(task);
+  if(result.ok){
+    task.lastExecution={at:Date.now(),type:result.type,status:"success",detail:result.reason};
+    writeJSON(TASK_KEY,tasks); renderTasks();
+    logActivity("任務執行",task.text+"｜"+result.reason);
+    return result;
+  }
+  task.lastExecution={at:Date.now(),status:result.blocked?"blocked":"failed",detail:result.reason};
+  writeJSON(TASK_KEY,tasks); renderTasks();
+  if(!result.blocked) recoverFailedTask(task.id,result.reason);
+  logActivity(result.blocked?"任務暫停":"任務失敗",task.text+"｜"+result.reason);
+  return result;
 }
 function recoverFailedTask(taskId, reason="未知失敗"){
   const state=readJSON(RECOVERY_KEY, {});
