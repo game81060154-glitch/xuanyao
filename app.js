@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.25";
+const CORE_VERSION = "1.26";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -95,6 +95,41 @@ function replanBlockedTask(task, reason){
   const created=createTask(candidate,task.id,[]);
   logActivity("自主改道",candidate+"｜原因："+reason);
   return created;
+}
+function auditSystemLocally(){
+  const checks=[];
+  const required=[
+    ["自主判斷",typeof recordDecision==="function"],
+    ["任務執行",typeof executeNextSafeTask==="function"],
+    ["自主改道",typeof replanBlockedTask==="function"],
+    ["目標管理",typeof manageGoalLocally==="function"],
+    ["失敗恢復",typeof recoverFailedTask==="function"]
+  ];
+  required.forEach(([name,ok])=>checks.push({name,status:ok?"ok":"missing"}));
+  const pending=tasks.filter(t=>!t.done&&!t.blocked).length;
+  const blocked=tasks.filter(t=>!t.done&&t.blocked).length;
+  const findings=[];
+  if(checks.some(x=>x.status==="missing")) findings.push("核心能力存在缺口");
+  if(blocked) findings.push("存在被安全停機的任務");
+  if(!goalState||!goalState.goal) findings.push("尚未設定目標");
+  const result={at:Date.now(),version:CORE_VERSION,checks,pending,blocked,findings};
+  logActivity("系統自審",findings.length?findings.join("｜"):"核心能力檢查正常");
+  return result;
+}
+function proposeSystemOptimization(audit){
+  if(!audit) audit=auditSystemLocally();
+  const proposals=[];
+  if(audit.blocked>0) proposals.push({type:"review_blocked_tasks",risk:"low",reason:"檢查安全停機任務是否已有更合適替代路線"});
+  if(audit.pending===0 && audit.findings.includes("尚未設定目標")) proposals.push({type:"goal_setup",risk:"low",reason:"需要使用者設定要達成的目標"});
+  if(audit.checks.some(x=>x.status==="missing")) proposals.push({type:"core_repair",risk:"high",reason:"核心能力缺失，禁止自動修改核心程式"});
+  if(!proposals.length) proposals.push({type:"maintenance_review",risk:"low",reason:"目前核心功能正常，維持現狀並等待新的目標"});
+  return proposals;
+}
+function selfOptimize(){
+  const audit=auditSystemLocally();
+  const proposals=proposeSystemOptimization(audit);
+  proposals.forEach(p=>logActivity("自主優化建議",p.type+"｜風險："+p.risk+"｜"+p.reason));
+  return {audit,proposals};
 }
 function assessGoalLocally(){
   if(!goalState||!goalState.goal) return {status:"no_goal",reason:"尚未設定目標"};
