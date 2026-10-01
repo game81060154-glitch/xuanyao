@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.26";
+const CORE_VERSION = "1.27";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -124,6 +124,20 @@ function proposeSystemOptimization(audit){
   if(audit.checks.some(x=>x.status==="missing")) proposals.push({type:"core_repair",risk:"high",reason:"核心能力缺失，禁止自動修改核心程式"});
   if(!proposals.length) proposals.push({type:"maintenance_review",risk:"low",reason:"目前核心功能正常，維持現狀並等待新的目標"});
   return proposals;
+}
+function validateOptimization(before,after){
+  const beforeFindings=Array.isArray(before?.findings)?before.findings:[];
+  const afterFindings=Array.isArray(after?.findings)?after.findings:[];
+  const improved=afterFindings.length<=beforeFindings.length;
+  const result={ok:improved,before:beforeFindings.length,after:afterFindings.length,at:Date.now()};
+  logActivity("優化驗證",improved?"優化後問題數未增加":"優化後問題數增加，暫停後續自動優化");
+  return result;
+}
+function checkCoreVersionConsistency(){
+  const version=String(CORE_VERSION||"");
+  const result={version,valid:/^1\.\d+$/.test(version),at:Date.now()};
+  if(!result.valid) logActivity("版本檢查","核心版本格式異常："+version);
+  return result;
 }
 function selfOptimize(){
   const audit=auditSystemLocally();
