@@ -1,4 +1,4 @@
-const CACHE = "xuanyao-web-1.16";
+const CACHE = "xuanyao-web-1.17";
 const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./manifest.webmanifest"];
 
 self.addEventListener("install", event => {
