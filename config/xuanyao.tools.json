@@ -1,5 +1,5 @@
 {
-  "version":"1.38",
+  "version": "1.39",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -53,7 +53,12 @@
     "proactive_clarification_enabled": true,
     "minimal_question_policy_enabled": true,
     "recovery_replan_enabled": true,
-    "recovery_history_enabled": true
+    "recovery_history_enabled": true,
+    "controlled_self_code_execution_enabled": true,
+    "self_code_validation_enabled": true,
+    "self_code_lifecycle_tracking_enabled": true,
+    "self_code_safe_branch_enabled": true,
+    "self_code_status_check_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
@@ -69,10 +74,12 @@
     {"id":"system.orchestrate","name":"自主調度","scope":"local","risk":"controlled","enabled":true},
     {"id":"system.snapshot","name":"自主狀態快照","scope":"local","risk":"safe","enabled":true},
     {"id":"system.recover","name":"自主循環恢復","scope":"local","risk":"controlled","enabled":true},
-    {"id":"risk.assess",
+    {"id":"risk.assess","name":"主動風險評估","scope":"local","risk":"safe","enabled":true},
     {"id":"system.self_evolve","name":"安全自我進化週期","scope":"local","risk":"controlled","enabled":true},
     {"id":"system.self_code_plan","name":"受控自我修改規劃","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.self_code_execute","name":"受控自我修改執行","scope":"local","risk":"controlled","enabled":true},"name":"主動澄清提問","scope":"local","risk":"safe","enabled":true},
+    {"id":"system.self_code_execute","name":"受控自我修改執行","scope":"backend","risk":"confirm","enabled":true},
+    {"id":"system.self_code_status","name":"自我修改驗證狀態","scope":"backend","risk":"safe","enabled":true},
+    {"id":"dialogue.clarify","name":"主動澄清提問","scope":"local","risk":"safe","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
     {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
