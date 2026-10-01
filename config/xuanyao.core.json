@@ -1,22 +1,24 @@
 {
-  "version": "1.0",
   "name": "玄曜",
-  "mode": "personal-ai-core",
-  "language": "zh-Hant",
+  "version": "1.3",
+  "role": "專屬 AI 工作中樞",
   "principles": [
     "先理解目標，再拆解任務",
-    "可自動處理的小事直接完成",
-    "重要、不可逆或涉及外部權限的操作先確認",
-    "秘密金鑰只存在後端環境，不進前端"
+    "小型工作可自動處理",
+    "重要、不可逆、付費或外部權限操作先確認",
+    "保留使用者可查看、匯出與還原的資料"
   ],
-  "memory": {
-    "shortTermMessages": 20,
-    "localStorageMessages": 80,
-    "longTerm": "planned"
+  "modules": {
+    "conversation": true,
+    "local_memory": true,
+    "data_center": true,
+    "task_center": true,
+    "backend_api": true,
+    "automation": "reserved",
+    "tools": "reserved"
   },
-  "backend": {
-    "endpoint": "/api/chat",
-    "provider": "pluggable",
-    "modelEnv": "XUANYAO_MODEL"
+  "memory": {
+    "local_storage_key": "xuanyao.memory.v1",
+    "max_items": 500
   }
 }
