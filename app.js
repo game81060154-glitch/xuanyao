@@ -374,7 +374,7 @@ function manageGoalLocally(){
   }
   return assessment;
 }
-function autonomousGoalCycle(maxSteps=3){
+async function autonomousGoalCycle(maxSteps=3){
   const limit=Math.max(1,Math.min(3,Number(maxSteps)||1));
   const trace=[];
   for(let i=0;i<limit;i++){
@@ -382,7 +382,7 @@ function autonomousGoalCycle(maxSteps=3){
     const state=getAutomationState();
     if(!state.nextTask){ trace.push({status:"idle"}); break; }
     const task=tasks.find(t=>t.id===state.nextTask.id);
-    const result=executeNextSafeTask();
+    const result=await executeNextSafeTask();
     trace.push({task:task?.text||state.nextTask.text,result});
     if(result.ok) continue;
     if(result.blocked){
@@ -395,7 +395,7 @@ function autonomousGoalCycle(maxSteps=3){
   }
   return {trace,nextTask:getAutomationState().nextTask||null};
 }
-function autonomousAdvance(maxSteps=3){
+async function autonomousAdvance(maxSteps=3){
   const limit=Math.max(1,Math.min(3,Number(maxSteps)||1));
   const results=[];
   for(let i=0;i<limit;i++){
@@ -405,7 +405,7 @@ function autonomousAdvance(maxSteps=3){
       results.push({status:"idle",reason:"沒有可安全推進的下一步"});
       break;
     }
-    const result=executeNextSafeTask();
+    const result=await executeNextSafeTask();
     results.push({task:state.nextTask.text,result});
     if(!result.ok) break;
     const finished=tasks.find(t=>t.id===state.nextTask.id);
@@ -440,7 +440,7 @@ async function executeAITask(task){
   return {ok:true,type:"ai",reason:"AI 已回傳可驗證結果"};
 }
 
-function executeNextSafeTask(){
+async function executeNextSafeTask(){
   const state=getAutomationState();
   const next=state.nextTask;
   if(!next) return {ok:false,reason:"目前沒有可執行任務"};
@@ -990,7 +990,7 @@ async function runAutonomousMissionTick(){
   saveAutonomousMissionState(next);
   coreState.textContent="自主運行中｜玄曜持續推進目標";
   try{
-    const localBefore=autonomousGoalCycle(3);
+    const localBefore=await autonomousGoalCycle(3);
     const history=messages.slice(-8).map(x=>({role:x.role==="user"?"user":"assistant",text:x.text}));
     const payload={
       message:
@@ -1035,7 +1035,7 @@ async function runAutonomousMissionTick(){
       backendStatus="unavailable";
       logActivity("自主規劃暫停","AI 後端目前不可用；本輪仍保留本機安全執行結果。");
     }
-    const localAfter=autonomousGoalCycle(3);
+    const localAfter=await autonomousGoalCycle(3);
     const updated={...getAutonomousMissionState(),running:false,lastStatus:"progressed",lastError:"",lastLocalBefore:localBefore,lastLocalAfter:localAfter,backendStatus,updatedAt:Date.now()};
     saveAutonomousMissionState(updated);
     logActivity("自主目標循環","本輪完成：本機安全執行＋可用時 AI 規劃；不需逐項人工確認。");
@@ -1060,9 +1060,9 @@ function startAutonomousMaintenance(){
   runAutonomousMissionTick().catch(()=>{});
 }
 
-function executeGoalLoopLocal(){
+async function executeGoalLoopLocal(){
   runSafeAutomation();
-  const result=executeNextSafeTask();
+  const result=await executeNextSafeTask();
   if(!result.ok){
     const state=getAutomationState();
     if(state.nextTask){
