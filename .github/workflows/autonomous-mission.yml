@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
+  pull-requests: write
 
 concurrency:
   group: xuanyao-continuous-mission
@@ -17,12 +18,12 @@ concurrency:
 jobs:
   mission:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Run persistent planning cycle
+      - name: Run autonomous planning and safe candidate executor
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
@@ -35,74 +36,128 @@ jobs:
           fi
 
           python - <<'PY'
-          import json, os, subprocess, urllib.request, datetime
+          import json, os, subprocess, urllib.request, datetime, re
 
           repo=os.environ["REPO"]
           goal=json.load(open("data/mission.json",encoding="utf-8"))
+
+          # 第一階段只允許可驗證、可回退的候選修改；絕不直接修改 main。
+          allowed={
+              "README.md",
+              "docs/ARCHITECTURE-1.18.md",
+              "docs/DEPLOY-AI-BACKEND.md",
+              "config/xuanyao.core.json",
+              "config/xuanyao.tools.json",
+              "config/xuanyao.memory.schema.json"
+          }
           files=[]
-          for path in ["README.md","config/xuanyao.core.json","config/xuanyao.tools.json","app.js","api/chat.js","api/research.js"]:
+          for path in ["README.md","config/xuanyao.core.json","config/xuanyao.tools.json",
+                       "config/xuanyao.memory.schema.json","app.js","api/chat.js","api/research.js",
+                       ".github/workflows/validate.yml"]:
               try:
                   text=open(path,encoding="utf-8").read()
-                  files.append({"path":path,"content":text[:12000]})
+                  files.append({"path":path,"content":text[:14000]})
               except Exception:
                   pass
 
-          prompt=("你是玄曜的長時間自主規劃核心。"
-                  "你的任務不是聊天，而是持續找出讓玄曜更可靠、更自主、更可恢復、更適合手機使用的下一個最小步驟。"
-                  "每一輪只提出一個最重要且可驗證的下一步。"
-                  "不要假裝程式已修改；不要要求使用者逐項確認低風險規劃。"
-                  "涉及付款、帳號、權限、不可逆外部操作時標記為需要人工確認。"
+          prompt=("你是玄曜的長時間自主規劃與安全候選修改核心。"
+                  "每輪只能提出一個最重要、最小、可驗證、可回退的改善。"
+                  "若沒有足夠把握，actionType 必須為 none。"
+                  "第一階段只能修改 allowlist 內檔案；不要修改 workflow、程式執行核心、API 金鑰、權限或部署設定。"
+                  "不要假裝已經修改；若 actionType=update_file，必須提供完整的新檔案內容。"
+                  "候選修改只會建立獨立分支與 Draft PR，不會自動合併 main。"
+                  "涉及付款、帳號、權限、不可逆外部操作時 requiresConfirmation=true 且 actionType=none。"
                   "\n最終目標："+goal["goal"]+
+                  "\n允許修改："+json.dumps(sorted(allowed),ensure_ascii=False)+
                   "\n目前專案資料："+json.dumps(files,ensure_ascii=False))
 
+          schema={
+            "type":"object","additionalProperties":False,
+            "properties":{
+              "status":{"type":"string"},
+              "actionType":{"type":"string","enum":["none","update_file"]},
+              "target":{"type":"string"},
+              "content":{"type":"string"},
+              "nextStep":{"type":"string"},
+              "reason":{"type":"string"},
+              "verification":{"type":"string"},
+              "risk":{"type":"string"},
+              "requiresConfirmation":{"type":"boolean"}
+            },
+            "required":["status","actionType","target","content","nextStep","reason","verification","risk","requiresConfirmation"]
+          }
+
           body=json.dumps({
-              "model": os.environ.get("OPENAI_MODEL") or "gpt-5.6-luna",
-              "input": prompt,
-              "text":{"format":{"type":"json_schema","name":"xuanyao_mission","strict":True,"schema":{
-                  "type":"object","additionalProperties":False,
-                  "properties":{
-                      "status":{"type":"string"},
-                      "nextStep":{"type":"string"},
-                      "reason":{"type":"string"},
-                      "verification":{"type":"string"},
-                      "risk":{"type":"string"},
-                      "requiresConfirmation":{"type":"boolean"}
-                  },
-                  "required":["status","nextStep","reason","verification","risk","requiresConfirmation"]
-              }}},
-              "max_output_tokens":700,
-              "store":False
+            "model":os.environ.get("OPENAI_MODEL") or "gpt-5.6-luna",
+            "input":prompt,
+            "text":{"format":{"type":"json_schema","name":"xuanyao_mission","strict":True,"schema":schema}},
+            "max_output_tokens":12000,
+            "store":False
           }).encode()
 
           req=urllib.request.Request(
-              "https://api.openai.com/v1/responses",
-              data=body,
-              headers={"Content-Type":"application/json","Authorization":"Bearer "+os.environ["OPENAI_API_KEY"]})
-          with urllib.request.urlopen(req,timeout=60) as r:
+            "https://api.openai.com/v1/responses",data=body,
+            headers={"Content-Type":"application/json","Authorization":"Bearer "+os.environ["OPENAI_API_KEY"]})
+          with urllib.request.urlopen(req,timeout=90) as r:
               data=json.load(r)
-
           result=json.loads(data.get("output_text","{}"))
+
+          action=result.get("actionType","none")
+          target=result.get("target","")
+          candidate=result.get("content","")
+          safe=(action=="update_file" and
+                target in allowed and
+                not result.get("requiresConfirmation",True) and
+                isinstance(candidate,str) and len(candidate)>0 and len(candidate)<=200000)
+
           now=datetime.datetime.now(datetime.timezone.utc).isoformat()
           title="玄曜｜持續自主規劃狀態"
-          marker="<!-- xuanyao-mission-state -->"
-          body_text=(marker+"\n"
-              +"**最後循環：** "+now+"\n\n"
-              +"**狀態：** "+result["status"]+"\n\n"
-              +"**下一步：** "+result["nextStep"]+"\n\n"
-              +"**原因：** "+result["reason"]+"\n\n"
-              +"**驗證：** "+result["verification"]+"\n\n"
-              +"**風險：** "+result["risk"]+"\n\n"
-              +"**需要人工確認：** "+str(result["requiresConfirmation"]))
+          summary=(f"<!-- xuanyao-mission-state -->\n"
+                   f"**最後循環：** {now}\n\n"
+                   f"**狀態：** {result.get('status','unknown')}\n\n"
+                   f"**下一步：** {result.get('nextStep','')}\n\n"
+                   f"**原因：** {result.get('reason','')}\n\n"
+                   f"**驗證：** {result.get('verification','')}\n\n"
+                   f"**風險：** {result.get('risk','')}\n\n"
+                   f"**候選動作：** {action} / {target or '-'}\n\n"
+                   f"**需要人工確認：** {result.get('requiresConfirmation')}\n\n"
+                   f"**候選執行：** {'已建立候選分支' if safe else '本輪不修改程式'}")
 
-          out=open("/tmp/mission.md","w",encoding="utf-8"); out.write(body_text); out.close()
+          out=open("/tmp/mission.md","w",encoding="utf-8"); out.write(summary); out.close()
           found=subprocess.check_output(
-              ["gh","issue","list","--repo",repo,"--state","open","--search",title+" in:title","--json","number,title"],
-              text=True)
+            ["gh","issue","list","--repo",repo,"--state","open","--search",title+" in:title","--json","number,title"],text=True)
           items=json.loads(found)
           if items:
               subprocess.run(["gh","issue","edit",str(items[0]["number"]),"--repo",repo,"--body-file","/tmp/mission.md"],check=True)
           else:
               subprocess.run(["gh","issue","create","--repo",repo,"--title",title,"--body-file","/tmp/mission.md"],check=True)
 
-          print("玄曜持續自主規劃循環完成：", result["nextStep"])
+          if not safe:
+              print("玄曜本輪採安全停留：", result.get("nextStep",""))
+              raise SystemExit(0)
+
+          # 建立獨立候選分支，永不直接寫入 main。
+          stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
+          branch="xuanyao/self-change/mission-"+stamp
+          subprocess.run(["git","config","user.name","xuanyao-autonomous"],check=True)
+          subprocess.run(["git","config","user.email","xuanyao-autonomous@users.noreply.github.com"],check=True)
+          subprocess.run(["git","checkout","-b",branch],check=True)
+
+          with open(target,"w",encoding="utf-8") as fh:
+              fh.write(candidate)
+          subprocess.run(["git","add","--",target],check=True)
+          subprocess.run(["git","commit","-m","chore(xuanyao): autonomous safe candidate"],check=True)
+          remote="https://x-access-token:"+os.environ["GH_TOKEN"]+"@github.com/"+repo+".git"
+          subprocess.run(["git","push",remote,"HEAD:"+branch],check=True)
+
+          pr_title="玄曜自主候選｜"+result.get("nextStep","安全改善")
+          pr_body=("此 PR 由玄曜長時間自主循環建立。\n\n"
+                   "這是**候選修改**，不會自動合併 main。\n\n"
+                   "**原因**："+result.get("reason","")+"\n\n"
+                   "**驗證方式**："+result.get("verification","")+"\n\n"
+                   "**風險**："+result.get("risk","")+"\n\n"
+                   "請由 Validate Xuanyao 工作流程驗證；通過後仍保留人工合併閘門。")
+          subprocess.run(["gh","pr","create","--repo",repo,"--head",branch,"--base","main",
+                          "--title",pr_title,"--body",pr_body,"--draft"],check=True)
+          print("玄曜已建立安全候選分支與 Draft PR：",branch)
           PY
