@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.27";
+const CORE_VERSION = "1.28";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -124,6 +124,27 @@ function proposeSystemOptimization(audit){
   if(audit.checks.some(x=>x.status==="missing")) proposals.push({type:"core_repair",risk:"high",reason:"核心能力缺失，禁止自動修改核心程式"});
   if(!proposals.length) proposals.push({type:"maintenance_review",risk:"low",reason:"目前核心功能正常，維持現狀並等待新的目標"});
   return proposals;
+}
+function prioritizeOptimizations(proposals){
+  return (Array.isArray(proposals)?proposals:[]).map((p,i)=>{
+    const risk=String(p.risk||"low");
+    const riskWeight=risk==="high"?0:risk==="controlled"?2:3;
+    const impact=String(p.type||"").includes("core")?1:2;
+    return {...p,priority:riskWeight+impact,order:i};
+  }).sort((a,b)=>b.priority-a.priority||a.order-b.order);
+}
+function selectSafeOptimization(proposals){
+  const ranked=prioritizeOptimizations(proposals);
+  const selected=ranked.find(p=>p.risk!=="high");
+  if(!selected) return {selected:null,ranked};
+  logActivity("優化選擇","選定："+selected.type+"｜優先度："+selected.priority);
+  return {selected,ranked};
+}
+function autonomousSystemManagement(){
+  const audit=auditSystemLocally();
+  const proposals=proposeSystemOptimization(audit);
+  const choice=selectSafeOptimization(proposals);
+  return {audit,proposals:choice.ranked,selected:choice.selected};
 }
 function validateOptimization(before,after){
   const beforeFindings=Array.isArray(before?.findings)?before.findings:[];
