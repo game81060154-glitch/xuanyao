@@ -434,7 +434,12 @@ async function executeAITask(task){
   const data=await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(data?.error||"AI task backend unavailable");
   const reply=String(data.reply||"").trim();
-  if(!reply) throw new Error("AI task returned no verifiable result");
+  const assessment=String(data.assessment||"").trim();
+  const decision=String(data.decision||"").trim();
+  if(!reply || !assessment || !decision) throw new Error("AI task returned incomplete structured result");
+  if(data.clarificationNeeded===true) return {ok:false,blocked:true,reason:"AI 需要關鍵資訊，尚未達成完成條件"};
+  if(Array.isArray(data.toolRequests) && data.toolRequests.some(x=>x && x.requiresConfirmation===true)) return {ok:false,blocked:true,reason:"AI 發現需要使用者確認的外部操作"};
+  if(Array.isArray(data.research) && data.research.length) return {ok:false,blocked:true,reason:"AI 判定仍需先完成查證"};
   add("system","【自主任務完成】"+reply);
   applyStructuredActions(data,prompt,reply);
   return {ok:true,type:"ai",reason:"AI 已回傳可驗證結果"};
