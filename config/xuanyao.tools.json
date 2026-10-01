@@ -32,6 +32,8 @@
     "safe_stop_enabled": true,
     "task_execution_engine_enabled": true,
     "execution_result_validation_enabled": true,
+    "autonomous_replanning_enabled": true,
+    "goal_recovery_loop_enabled": true,
     "recovery_history_enabled": true
   },
   "tools": [
