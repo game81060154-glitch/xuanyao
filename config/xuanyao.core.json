@@ -59,6 +59,8 @@
     "version_consistency_check": true,
     "optimization_prioritization": true,
     "single_change_guard": true,
+    "autonomous_orchestration": true,
+    "goal_over_maintenance_priority": true,
     "recovery_history": true
   },
   "memory": {
