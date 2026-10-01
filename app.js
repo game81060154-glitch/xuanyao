@@ -6,6 +6,7 @@ const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
+const DECISION_KEY = "xuanyao.decisions.v1";
 const TOOL_RUN_KEY = "xuanyao.toolRuns.v1";
 
 const chat = document.getElementById("chat");
@@ -38,6 +39,7 @@ let tasks = readJSON(TASK_KEY, []);
 let memories = readJSON(MEMORY_KEY, []);
 let approvals = readJSON(APPROVAL_KEY, []);
 let activities = readJSON(ACTIVITY_KEY, []);
+let decisions = readJSON(DECISION_KEY, []);
 
 function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); renderMemoryTools(); }
 function makeId() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
@@ -75,6 +77,26 @@ function routeLocalIntent(text, reply="") {
   }
   if(/目前|現在|進度|專案/.test(lower) && reply) saveMemory("玄曜回應摘要："+reply,"xuanyao");
   return changed;
+}
+function recordDecision(data) {
+  if (!data || (!data.assessment && !data.decision && !Array.isArray(data.options))) return;
+  const item = {
+    id: makeId(), at: Date.now(),
+    assessment: String(data.assessment || ""),
+    decision: String(data.decision || ""),
+    options: Array.isArray(data.options) ? data.options.slice(0,5) : []
+  };
+  decisions.unshift(item);
+  decisions = decisions.slice(0,50);
+  writeJSON(DECISION_KEY, decisions);
+  renderDecisions();
+}
+function renderDecisions() {
+  const el=document.getElementById("decisionList");
+  if(!el) return;
+  el.innerHTML=decisions.slice(0,10).map(d =>
+    `<div class="activity-item"><b>自主判斷</b><time>${new Date(d.at).toLocaleString()}</time><p>${escapeHTML(d.assessment || "已完成判斷")}</p><p>${escapeHTML(d.decision || "尚未形成明確決策")}</p></div>`
+  ).join("") || "<div class='empty'>尚無自主判斷紀錄。</div>";
 }
 function logActivity(type, text) {
   activities.unshift({ id: makeId(), type, text: String(text || ""), at: Date.now() });
@@ -161,6 +183,7 @@ function executeToolActions(toolActions) {
   if (changed) writeJSON(runKey, Array.from(seenSet).slice(-100));
 }
 function applyStructuredActions(data, sourceText, reply) {
+  recordDecision(data);
   if (data.assessment || data.decision || (Array.isArray(data.options) && data.options.length)) {
     const optionText = Array.isArray(data.options) ? data.options.slice(0,5).map(o =>
       "• " + (o.name || "未知方案") + "｜" + (o.description || "") + "｜風險：" + (o.risk || "未評估") + (o.known === false ? "｜未驗證" : "")
