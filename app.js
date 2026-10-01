@@ -437,6 +437,7 @@ function runSafeAutomation() {
 }
 function executeGoalLoopLocal(){
   runSafeAutomation();
+if(goalState?.goal) executeGoalLoopLocal();
   const state=getAutomationState();
   const next=state.nextTask;
   if(!next){logActivity("目標循環","目前沒有可安全執行的下一步；需要外部操作或前置條件。");return;}
