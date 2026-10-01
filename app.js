@@ -82,6 +82,30 @@ function executeTaskLocally(task){
   if(type==="needs_ai") return {ok:false,blocked:true,reason:"需要 AI 推理或外部能力，暫不冒充已執行"};
   return {ok:true,type,reason:"本機安全任務已完成初步執行判定"};
 }
+function autonomousAdvance(maxSteps=3){
+  const limit=Math.max(1,Math.min(3,Number(maxSteps)||1));
+  const results=[];
+  for(let i=0;i<limit;i++){
+    runSafeAutomation();
+    const state=getAutomationState();
+    if(!state.nextTask){
+      results.push({status:"idle",reason:"沒有可安全推進的下一步"});
+      break;
+    }
+    const result=executeNextSafeTask();
+    results.push({task:state.nextTask.text,result});
+    if(!result.ok) break;
+    const finished=tasks.find(t=>t.id===state.nextTask.id);
+    if(finished && !finished.done){
+      logActivity("自主推進","執行已完成，但任務尚未通過完成驗證，暫停避免假完成。");
+      results.push({status:"validation_required"});
+      break;
+    }
+  }
+  const finalState=getAutomationState();
+  logActivity("自主推進",results.map(x=>x.task||x.reason||x.status).join(" → "));
+  return {results,nextTask:finalState.nextTask||null};
+}
 function executeNextSafeTask(){
   const state=getAutomationState();
   const next=state.nextTask;
