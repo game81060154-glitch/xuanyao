@@ -65,6 +65,24 @@ jobs:
           console.log("Version consistency OK:", core.version);
           NODE
 
+      - name: Validate autonomous mission configuration
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const core = JSON.parse(fs.readFileSync("config/xuanyao.core.json", "utf8"));
+          const tools = JSON.parse(fs.readFileSync("config/xuanyao.tools.json", "utf8"));
+          if (core.modules.continuous_autonomous_mission !== true) throw new Error("Missing core capability: continuous_autonomous_mission");
+          if (core.modules.autonomous_mission_state !== true) throw new Error("Missing core capability: autonomous_mission_state");
+          if (tools.policy.continuous_autonomous_mission_enabled !== true) throw new Error("Missing tool policy: continuous_autonomous_mission_enabled");
+          const ids = new Set(tools.tools.map(x => x.id));
+          if (!ids.has("system.autonomous_mission")) throw new Error("Missing tool: system.autonomous_mission");
+          const app = fs.readFileSync("app.js", "utf8");
+          for (const marker of ["runAutonomousMissionTick","AUTONOMOUS_MISSION_KEY","autonomousGoalCycle"]) {
+            if (!app.includes(marker)) throw new Error("Missing autonomous mission implementation: " + marker);
+          }
+          console.log("Autonomous mission configuration OK");
+          NODE
+
       - name: Validate self-code lifecycle configuration
         run: |
           node <<'NODE'
