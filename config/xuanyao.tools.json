@@ -1,5 +1,5 @@
 {
-  "version": "1.17",
+  "version": "1.18",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -21,7 +21,9 @@
     "research_planning_enabled": true,
     "verification_queue_enabled": true,
     "research_evidence_store_enabled": true,
-    "evidence_lifecycle_enabled": true
+    "evidence_lifecycle_enabled": true,
+    "controlled_web_research_enabled": true,
+    "evidence_reassessment_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
@@ -38,6 +40,7 @@
     {"id":"option.verify","name":"未知方案驗證","scope":"local","risk":"safe","enabled":true},
     {"id":"research.plan","name":"研究問題規劃","scope":"local","risk":"safe","enabled":true},
     {"id":"research.record","name":"研究證據紀錄","scope":"local","risk":"safe","enabled":true},
-    {"id":"research.reassess","name":"證據後重新判斷","scope":"local","risk":"safe","enabled":true}
+    {"id":"research.reassess","name":"證據後重新判斷","scope":"local","risk":"safe","enabled":true},
+    {"id":"research.execute","name":"執行網路查證","scope":"external","risk":"paid-confirm","enabled":true}
   ]
 }
