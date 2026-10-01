@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.9";
+const CORE_VERSION = "1.10";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
@@ -121,19 +121,40 @@ function executeToolActions(toolActions) {
   const seenSet = new Set(seen);
   let changed = false;
 
+  function recordRun(action, status, detail, attempt) {
+    const runs = readJSON("xuanyao.toolRuns.detail.v1", []);
+    runs.unshift({ id: makeId(), action: action.action || "unknown", status, detail: String(detail || ""), attempt, at: Date.now() });
+    writeJSON("xuanyao.toolRuns.detail.v1", runs.slice(0, 100));
+  }
+
+  function runOnce(action, attempt) {
+    if (action.action === "memory.save" && action.content) {
+      const ok = saveMemory(action.content, "xuanyao");
+      const verified = ok && memories.some(m => m.content === String(action.content).trim());
+      return { ok: verified, detail: verified ? "記憶已寫入並驗證" : "記憶寫入驗證失敗" };
+    }
+    if (action.action === "task.create" && action.text) {
+      const before = tasks.length;
+      createTask(action.text, action.parentId || null, action.dependsOn || []);
+      const verified = tasks.length > before && tasks.some(t => t.text === String(action.text).trim() && !t.done);
+      return { ok: verified, detail: verified ? "任務已建立並驗證" : "任務建立驗證失敗" };
+    }
+    return { ok: false, detail: "未知或缺少必要參數的工具動作" };
+  }
+
   toolActions.slice(0, 8).forEach(action => {
     const fingerprint = JSON.stringify(action);
     if (seenSet.has(fingerprint)) return;
+
+    let result = runOnce(action, 1);
+    if (!result.ok && (action.action === "memory.save" || action.action === "task.create")) {
+      result = runOnce(action, 2);
+    }
+
     seenSet.add(fingerprint);
     changed = true;
-
-    if (action.action === "memory.save" && action.content) {
-      saveMemory(action.content, "xuanyao");
-      logActivity("工具完成", "memory.save｜" + action.content);
-    } else if (action.action === "task.create" && action.text) {
-      createTask(action.text, action.parentId || null, action.dependsOn || []);
-      logActivity("工具完成", "task.create｜" + action.text);
-    }
+    recordRun(action, result.ok ? "success" : "failed", result.detail, result.ok ? (result.detail.includes("驗證") ? 1 : 2) : 2);
+    logActivity(result.ok ? "工具完成" : "工具失敗", action.action + "｜" + result.detail);
   });
 
   if (changed) writeJSON(runKey, Array.from(seenSet).slice(-100));
