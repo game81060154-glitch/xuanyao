@@ -62,3 +62,5 @@ footer{text-align:center;color:#536078;font-size:10px;padding:10px 0 2px}
 .task{display:flex;align-items:center;gap:9px}.task span{flex:1;word-break:break-word}.task.done span{text-decoration:line-through;opacity:.5}
 .task-toggle,.task-delete{background:transparent;color:inherit;border:0;cursor:pointer}.task-delete{opacity:.65}
 @media (max-width:520px){.data-tools{flex-wrap:wrap}.data-tools input{flex-basis:100%}}
+
+.gateway-row{display:flex;gap:8px;margin-bottom:12px}.gateway-row input{flex:1;min-width:0}.gateway-row button{white-space:nowrap}
