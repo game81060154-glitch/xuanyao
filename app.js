@@ -228,11 +228,31 @@ function renderData() {
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+function memoryScore(m, query="") {
+  const text=String(m.content||"").toLowerCase();
+  const q=String(query||"").toLowerCase().trim();
+  let score=m.pinned?5:0;
+  if(!q) return score + (m.updatedAt||m.createdAt||0)/1e13;
+  q.split(/\\s+/).filter(Boolean).forEach(word=>{ if(text.includes(word)) score+=3; });
+  if(text.includes(q)) score+=8;
+  return score + (m.updatedAt||m.createdAt||0)/1e13;
+}
+function searchMemories(query="", limit=10) {
+  return memories.slice().sort((a,b)=>memoryScore(b,query)-memoryScore(a,query)).slice(0,limit);
+}
+function getTaskWorkflow() {
+  const pending=tasks.filter(t=>!t.done);
+  return pending.slice().sort((a,b)=>{
+    const ad=(Array.isArray(a.dependsOn)?a.dependsOn:[]).length;
+    const bd=(Array.isArray(b.dependsOn)?b.dependsOn:[]).length;
+    return ad-bd || (a.at||0)-(b.at||0);
+  });
+}
 function renderMemoryTools() {
   const list = document.getElementById("memoryList");
   if (!list) return;
   const q = (dataSearch.value || "").trim().toLowerCase();
-  const rows = memories.filter(m => !q || (m.content || "").toLowerCase().includes(q)).slice(0, 30);
+  const rows = searchMemories(q, 30);
   list.innerHTML = rows.length ? rows.map(m =>
     `<article class="data-item"><b>記憶</b><time>${new Date(m.updatedAt || m.createdAt).toLocaleString()}</time><p>${escapeHTML(m.content)}</p></article>`
   ).join("") : "<div class='empty'>目前沒有符合的記憶。</div>";
