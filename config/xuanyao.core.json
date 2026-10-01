@@ -35,7 +35,9 @@
     "decision_history": true,
     "local_context_awareness": true,
     "research_planning": true,
-    "verification_queue": true
+    "verification_queue": true,
+    "research_evidence_store": true,
+    "evidence_lifecycle": true
   },
   "memory": {
     "local_storage_key": "xuanyao.memory.v1",
