@@ -1,6 +1,6 @@
 {
   "name": "玄曜",
-  "version": "1.12",
+  "version": "1.13",
   "role": "專屬 AI 工作中樞",
   "principles": [
     "先理解目標，再拆解任務",
@@ -20,7 +20,7 @@
     "tool_execution": true,
     "approval_gate": true,
     "activity_log": true,
-    "automation": "next",
+    "automation": "safe_local",
     "task_dependencies": true,
     "result_validation": true,
     "failure_recovery": true,
