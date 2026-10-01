@@ -48,3 +48,17 @@ textarea::placeholder{color:#68758e}
 .composer button{width:42px;height:42px;border:0;border-radius:13px;background:linear-gradient(145deg,var(--accent),var(--accent2));color:white;font-size:20px}
 footer{text-align:center;color:#536078;font-size:10px;padding:10px 0 2px}
 @media(min-width:700px){.app-shell{padding-top:28px}.chat{min-height:330px}}
+
+
+.data-tools,.task-form{display:flex;gap:8px;margin-bottom:12px}
+.data-tools input,.task-form input{flex:1;min-width:0}
+.data-tools input,.task-form input{background:#0b1020;color:inherit;border:1px solid #26304a;border-radius:12px;padding:11px 12px}
+.data-tools button,.file-btn,.task-form button{border:1px solid #33405e;background:#151d32;color:inherit;border-radius:12px;padding:10px 12px;cursor:pointer}
+.file-btn input{display:none}
+.data-list,.task-list{display:grid;gap:8px;max-height:360px;overflow:auto}
+.data-item,.task{background:#0d1426;border:1px solid #202b45;border-radius:12px;padding:10px 12px}
+.data-item b{margin-right:8px}.data-item time{font-size:11px;opacity:.55}.data-item p{margin:6px 0 0;white-space:pre-wrap;word-break:break-word}
+.empty{opacity:.55;padding:8px}
+.task{display:flex;align-items:center;gap:9px}.task span{flex:1;word-break:break-word}.task.done span{text-decoration:line-through;opacity:.5}
+.task-toggle,.task-delete{background:transparent;color:inherit;border:0;cursor:pointer}.task-delete{opacity:.65}
+@media (max-width:520px){.data-tools{flex-wrap:wrap}.data-tools input{flex-basis:100%}}
