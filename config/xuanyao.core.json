@@ -55,6 +55,8 @@
     "system_self_audit": true,
     "autonomous_optimization": true,
     "optimization_risk_gate": true,
+    "optimization_validation": true,
+    "version_consistency_check": true,
     "recovery_history": true
   },
   "memory": {
