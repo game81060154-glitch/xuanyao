@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.41";
+const CORE_VERSION = "1.42";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -373,6 +373,7 @@ function autonomousGoalCycle(maxSteps=3){
   const trace=[];
   for(let i=0;i<limit;i++){
     runSafeAutomation();
+startAutonomousMaintenance();
     const state=getAutomationState();
     if(!state.nextTask){ trace.push({status:"idle"}); break; }
     const task=tasks.find(t=>t.id===state.nextTask.id);
@@ -839,6 +840,47 @@ function prepareSelfCodeReplan(failureReason="",target=""){
 }
 function resetSelfCodeReplanState(){
   saveSelfCodeReplanState({attempts:0,last:null,blocked:false});
+}
+
+async function syncSelfCodeCycle(){
+  const state=getSelfCodeCycle();
+  if(!state.branch) return {status:"idle",reason:"尚無候選自我修改分支。"};
+  const encoded=encodeURIComponent(state.branch);
+  try{
+    const res=await fetch("/api/self-code-status?branch="+encoded);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data?.error||"self-code status");
+    const validation=data.validation||{};
+    const mapped=validation.state==="passed"?"candidate":validation.state==="failed"?"failed":validation.state==="running"?"validating":"waiting";
+    const next={status:mapped,branch:state.branch,commitSha:data.commitSha||state.commitSha,target:state.target,failure:mapped==="failed"?(data.nextAction||"候選修改驗證失敗。"):"",attempts:state.attempts||0,validation,updatedAt:Date.now()};
+    saveSelfCodeCycle(next);
+    logActivity("自我修改狀態",state.branch+"｜"+mapped);
+    if(mapped==="failed"){
+      const replan=await fetch("/api/self-code-replan",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({branch:state.branch,target:state.target,previousPlan:{id:state.planId||"",target:state.target}})
+      });
+      const result=await replan.json().catch(()=>({}));
+      if(replan.ok && result.status==="replan_ready"){
+        recordSelfCodeCycle({status:"replan_ready",failure:result.failure?.reason||next.failure,replan:result.nextPlan||null,updatedAt:Date.now()});
+        logActivity("自我修改重新規劃","已取得驗證失敗原因與下一輪受控方案；尚未修改程式碼。");
+      }else if(result.status==="blocked"||result.status==="not_ready"){
+        recordSelfCodeCycle({status:"failed",failure:result.reason||next.failure,updatedAt:Date.now()});
+      }
+    }
+    return getSelfCodeCycle();
+  }catch(error){
+    logActivity("自我修改狀態查詢失敗",String(error?.message||error));
+    return recordSelfCodeCycle({status:"status_unavailable",failure:String(error?.message||error)});
+  }
+}
+
+function startAutonomousMaintenance(){
+  const last=Number(readJSON("xuanyao.selfCodeMaintenance.v1",{last:0}).last||0);
+  const now=Date.now();
+  if(now-last<30000) return;
+  writeJSON("xuanyao.selfCodeMaintenance.v1",{last:now});
+  syncSelfCodeCycle().catch(()=>{});
 }
 \nfunction executeGoalLoopLocal(){
   runSafeAutomation();
