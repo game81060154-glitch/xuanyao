@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "goal": "持續完善玄曜至最終目標：建立可長時間、自主、可驗證、可恢復的個人 AI 工作中樞。",
+  "mode": "continuous_planning",
+  "maxCyclesPerRun": 1,
+  "updatedAt": null
+}
