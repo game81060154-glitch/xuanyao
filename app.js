@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.36";
+const CORE_VERSION = "1.37";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -247,6 +247,28 @@ function validateSelfOptimization(before, after) {
     afterFindings,
     reason: afterFindings <= beforeFindings ? "改善後未增加已知問題。" : "改善後發現問題增加，暫不採用。"
   };
+}
+
+function buildSelfCodeChangePlan(target, reason="") {
+  return {
+    id: makeId(),
+    target: String(target||"").trim(),
+    reason: String(reason||"").trim(),
+    mode: "controlled",
+    backupRequired: true,
+    validationRequired: true,
+    rollbackRequired: true,
+    status: "planned",
+    at: Date.now()
+  };
+}
+
+function validateSelfCodeChangePlan(plan) {
+  if (!plan || !plan.target) return {valid:false, reason:"缺少修改目標。"};
+  if (!plan.backupRequired || !plan.validationRequired || !plan.rollbackRequired) {
+    return {valid:false, reason:"缺少備份、驗證或回退條件。"};
+  }
+  return {valid:true, reason:"符合受控自我修改條件。"};
 }
 
 function selfEvolutionCycle() {
