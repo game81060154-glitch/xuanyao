@@ -28,7 +28,12 @@
     "failure_recovery": true,
     "memory_ranking": true,
     "workflow_ordering": true,
-    "error_diagnostics": true
+    "error_diagnostics": true,
+    "autonomous_judgment": true,
+    "unknown_option_exploration": true,
+    "risk_based_decision": true,
+    "decision_history": true,
+    "local_context_awareness": true
   },
   "memory": {
     "local_storage_key": "xuanyao.memory.v1",
