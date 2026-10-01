@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.30";
+const CORE_VERSION = "1.31";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -156,6 +156,24 @@ function createAutonomySnapshot(orchestration){
   history.unshift(snapshot);
   writeJSON(key,history.slice(0,100));
   return snapshot;
+}
+function detectAutonomyLoop(){
+  const history=readJSON("xuanyao.autonomy.v1",[]);
+  if(history.length<3) return {loop:false};
+  const recent=history.slice(0,3).map(x=>x.mode+"|"+(x.action?.id||x.action?.type||""));
+  const loop=recent.length===3 && new Set(recent).size===1;
+  if(loop) logActivity("自主循環偵測","最近 3 次自主決策完全重複，暫停原路徑。");
+  return {loop,recent};
+}
+function guardAutonomousLoop(){
+  const detection=detectAutonomyLoop();
+  if(!detection.loop) return {allowed:true};
+  const key="xuanyao.autonomy.guard.v1";
+  const guard=readJSON(key,{blocked:false,at:0});
+  guard.blocked=true; guard.at=Date.now(); guard.reason="偵測到重複自主循環";
+  writeJSON(key,guard);
+  add("system","玄曜自主防護：偵測到重複決策循環，已暫停原路徑並要求重新規劃。");
+  return {allowed:false,reason:guard.reason};
 }
 function autonomousOrchestrator(){
   const goal=manageGoalLocally();
