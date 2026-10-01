@@ -48,6 +48,8 @@
     "safe_stop": true,
     "task_execution_engine": true,
     "execution_result_validation": true,
+    "autonomous_replanning": true,
+    "goal_recovery_loop": true,
     "recovery_history": true
   },
   "memory": {
