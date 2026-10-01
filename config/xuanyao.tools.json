@@ -49,6 +49,8 @@
     "loop_detection_enabled": true,
     "autonomy_loop_guard_enabled": true,
     "safe_replan_on_loop_enabled": true,
+    "autonomy_loop_recovery_enabled": true,
+    "recovery_replan_enabled": true,
     "recovery_history_enabled": true
   },
   "tools": [
@@ -64,6 +66,7 @@
     {"id":"system.prioritize","name":"優化優先級判斷","scope":"local","risk":"safe","enabled":true},
     {"id":"system.orchestrate","name":"自主調度","scope":"local","risk":"controlled","enabled":true},
     {"id":"system.snapshot","name":"自主狀態快照","scope":"local","risk":"safe","enabled":true},
+    {"id":"system.recover","name":"自主循環恢復","scope":"local","risk":"controlled","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
     {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
