@@ -771,6 +771,14 @@ async function ask(text) {
     const data = await res.json();
     const reply = data.reply || "後端沒有提供回應。";
     add("system", reply);
+    if (data.riskAlert) {
+      const level = String(data.riskLevel || "unknown");
+      const summary = String(data.riskSummary || "這個事項存在需要注意的風險。").trim();
+      add("system", `風險提醒｜${level}｜${summary}`);
+      if (Array.isArray(data.riskFactors) && data.riskFactors.length) add("system", "主要風險：" + data.riskFactors.slice(0, 5).join("；"));
+      if (String(data.decisionSupport || "").trim()) add("system", "判斷依據：" + String(data.decisionSupport).trim());
+      logActivity("主動風險告知", summary);
+    }
     if (data.clarificationNeeded && String(data.clarificationQuestion || "").trim()) {
       add("system", "玄曜需要你確認：" + String(data.clarificationQuestion).trim());
       logActivity("主動澄清", String(data.clarificationQuestion).trim());
