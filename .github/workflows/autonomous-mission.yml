@@ -95,12 +95,26 @@ jobs:
             "store":False
           }).encode()
 
-          req=urllib.request.Request(
-            "https://api.openai.com/v1/responses",data=body,
-            headers={"Content-Type":"application/json","Authorization":"Bearer "+os.environ["OPENAI_API_KEY"]})
-          with urllib.request.urlopen(req,timeout=90) as r:
-              data=json.load(r)
-          result=json.loads(data.get("output_text","{}"))
+          result=None
+          last_error=None
+          # 雲端暫時性錯誤採有限重試；避免單次網路/API 波動讓長期循環中斷。
+          for attempt in range(1,4):
+              try:
+                  req=urllib.request.Request(
+                      "https://api.openai.com/v1/responses",data=body,
+                      headers={"Content-Type":"application/json","Authorization":"Bearer "+os.environ["OPENAI_API_KEY"]})
+                  with urllib.request.urlopen(req,timeout=90) as r:
+                      data=json.load(r)
+                  result=json.loads(data.get("output_text","{}"))
+                  break
+              except Exception as exc:
+                  last_error=exc
+                  if attempt < 3:
+                      import time
+                      time.sleep(attempt*5)
+          if result is None:
+              print("::warning::玄曜雲端 AI 本輪暫時失敗，將由下一個排程週期恢復：", last_error)
+              raise SystemExit(0)
 
           action=result.get("actionType","none")
           target=result.get("target","")
@@ -109,6 +123,19 @@ jobs:
                 target in allowed and
                 not result.get("requiresConfirmation",True) and
                 isinstance(candidate,str) and len(candidate)>0 and len(candidate)<=200000)
+
+          # 防止長期循環在同一類候選上重複建立 PR；已有開放候選時本輪只記錄狀態。
+          if safe:
+              try:
+                  existing=json.loads(subprocess.check_output(
+                      ["gh","pr","list","--repo",repo,"--state","open",
+                       "--search","玄曜自主候選 in:title","--json","number,title"],text=True))
+                  if existing:
+                      print("玄曜已有開放候選 PR，本輪跳過新 PR：", existing[0].get("number"))
+                      safe=False
+              except Exception as exc:
+                  print("::warning::無法檢查既有候選 PR，採保守停留：", exc)
+                  safe=False
 
           now=datetime.datetime.now(datetime.timezone.utc).isoformat()
           title="玄曜｜持續自主規劃狀態"
