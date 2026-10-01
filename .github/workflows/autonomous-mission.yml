@@ -172,6 +172,23 @@ jobs:
 
           with open(target,"w",encoding="utf-8") as fh:
               fh.write(candidate)
+
+          # 候選落盤後先做最小本地驗證；驗證失敗就不建立 PR，避免把壞候選送入後續流程。
+          if open(target,encoding="utf-8").read() == next((x["content"] for x in files if x["path"]==target),""):
+              print("玄曜候選與目前檔案完全相同，安全停留。")
+              raise SystemExit(0)
+          if target.endswith(".json"):
+              try:
+                  with open(target,encoding="utf-8") as fh:
+                      json.load(fh)
+              except Exception as exc:
+                  print("::warning::候選 JSON 驗證失敗，停止建立 PR：", exc)
+                  raise SystemExit(0)
+          if target.startswith("docs/") or target=="README.md":
+              if len(open(target,encoding="utf-8").read().strip()) < 20:
+                  print("::warning::候選文件內容異常過短，停止建立 PR。")
+                  raise SystemExit(0)
+
           subprocess.run(["git","add","--",target],check=True)
           subprocess.run(["git","commit","-m","chore(xuanyao): autonomous safe candidate"],check=True)
           remote="https://x-access-token:"+os.environ["GH_TOKEN"]+"@github.com/"+repo+".git"
