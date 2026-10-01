@@ -1,5 +1,5 @@
 {
-  "version": "1.39",
+  "version": "1.40",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -58,7 +58,10 @@
     "self_code_validation_enabled": true,
     "self_code_lifecycle_tracking_enabled": true,
     "self_code_safe_branch_enabled": true,
-    "self_code_status_check_enabled": true
+    "self_code_status_check_enabled": true,
+    "self_code_lifecycle_gate_enabled": true,
+    "self_code_failure_isolation_enabled": true,
+    "self_code_replan_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
@@ -79,6 +82,8 @@
     {"id":"system.self_code_plan","name":"受控自我修改規劃","scope":"local","risk":"controlled","enabled":true},
     {"id":"system.self_code_execute","name":"受控自我修改執行","scope":"backend","risk":"confirm","enabled":true},
     {"id":"system.self_code_status","name":"自我修改驗證狀態","scope":"backend","risk":"safe","enabled":true},
+    {"id":"system.self_code_replan","name":"自我修改失敗重新規劃","scope":"backend","risk":"controlled","enabled":true},
+    {"id":"system.self_code_lifecycle","name":"自我修改生命週期","scope":"backend","risk":"controlled","enabled":true},
     {"id":"dialogue.clarify","name":"主動澄清提問","scope":"local","risk":"safe","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
