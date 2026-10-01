@@ -66,3 +66,10 @@ footer{text-align:center;color:#536078;font-size:10px;padding:10px 0 2px}
 .gateway-row{display:flex;gap:8px;margin-bottom:12px}.gateway-row input{flex:1;min-width:0}.gateway-row button{white-space:nowrap}
 
 .tool-list{display:grid;gap:8px;margin-top:10px}.tool-chip{display:flex;justify-content:space-between;gap:8px;align-items:center;background:#0b1020;border:1px solid #1c2740;border-radius:11px;padding:9px 10px}.tool-chip b{font-size:12px}.tool-chip span{font-size:11px;color:var(--muted)}
+.approval-list,.activity-list{display:grid;gap:8px;max-height:320px;overflow:auto}
+.approval-item,.activity-item{background:#0d1426;border:1px solid #202b45;border-radius:12px;padding:10px 12px}
+.approval-item b,.activity-item b{font-size:12px}
+.approval-item p,.activity-item p{margin:6px 0 0;white-space:pre-wrap;word-break:break-word;font-size:13px}
+.approval-item time,.activity-item time{font-size:10px;opacity:.55;margin-left:8px}
+.approval-actions{display:flex;gap:8px;margin-top:9px}
+.approval-actions button{border:1px solid #33405e;background:#151d32;color:inherit;border-radius:10px;padding:7px 11px}
