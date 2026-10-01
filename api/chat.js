@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
   const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
   const input = history
-    .filter(x => x && (x.role === "user" || x.role === "system") && typeof x.text === "string")
+    .filter(x => x && (x.role === "user" || x.role === "assistant") && typeof x.text === "string")
     .map(x => ({ role: x.role, content: x.text }))
     .concat([{ role: "user", content: message }]);
 
