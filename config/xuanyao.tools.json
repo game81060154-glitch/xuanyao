@@ -1,5 +1,5 @@
 {
-  "version": "1.40",
+  "version": "1.41",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -62,42 +62,248 @@
     "self_code_lifecycle_gate_enabled": true,
     "self_code_failure_isolation_enabled": true,
     "self_code_replan_enabled": true,
-    "self_code_failure_analysis_enabled": true
+    "self_code_failure_analysis_enabled": true,
+    "self_code_bounded_recovery_enabled": true,
+    "self_code_replan_dispatch_enabled": true
   },
   "tools": [
-    {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
-    {"id":"memory.search","name":"搜尋記憶","scope":"local","risk":"safe","enabled":true},
-    {"id":"task.create","name":"建立任務","scope":"local","risk":"safe","enabled":true},
-    {"id":"task.complete","name":"完成任務","scope":"local","risk":"safe","enabled":true},
-    {"id":"task.classify","name":"任務分類","scope":"local","risk":"safe","enabled":true},
-    {"id":"task.execute","name":"安全任務執行","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.audit","name":"系統自我審查","scope":"local","risk":"safe","enabled":true},
-    {"id":"system.optimize","name":"自主優化提案","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.validate","name":"優化結果驗證","scope":"local","risk":"safe","enabled":true},
-    {"id":"system.prioritize","name":"優化優先級判斷","scope":"local","risk":"safe","enabled":true},
-    {"id":"system.orchestrate","name":"自主調度","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.snapshot","name":"自主狀態快照","scope":"local","risk":"safe","enabled":true},
-    {"id":"system.recover","name":"自主循環恢復","scope":"local","risk":"controlled","enabled":true},
-    {"id":"risk.assess","name":"主動風險評估","scope":"local","risk":"safe","enabled":true},
-    {"id":"system.self_evolve","name":"安全自我進化週期","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.self_code_plan","name":"受控自我修改規劃","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.self_code_execute","name":"受控自我修改執行","scope":"backend","risk":"confirm","enabled":true},
-    {"id":"system.self_code_status","name":"自我修改驗證狀態","scope":"backend","risk":"safe","enabled":true},
-    {"id":"system.self_code_replan","name":"自我修改失敗重新規劃","scope":"backend","risk":"controlled","enabled":true},
-    {"id":"system.self_code_failure_analysis","name":"驗證失敗原因分析","scope":"backend","risk":"safe","enabled":true},
-    {"id":"system.self_code_lifecycle","name":"自我修改生命週期","scope":"backend","risk":"controlled","enabled":true},
-    {"id":"dialogue.clarify","name":"主動澄清提問","scope":"local","risk":"safe","enabled":true},
-    {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
-    {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
-    {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
-    {"id":"external.request","name":"外部工具請求","scope":"external","risk":"confirm","enabled":true},
-    {"id":"tool.execution","name":"工具執行循環","scope":"backend","risk":"controlled","enabled":true},
-    {"id":"tool.result","name":"工具結果回傳","scope":"backend","risk":"controlled","enabled":true},
-    {"id":"decision.record","name":"自主判斷紀錄","scope":"local","risk":"safe","enabled":true},
-    {"id":"option.verify","name":"未知方案驗證","scope":"local","risk":"safe","enabled":true},
-    {"id":"research.plan","name":"研究問題規劃","scope":"local","risk":"safe","enabled":true},
-    {"id":"research.record","name":"研究證據紀錄","scope":"local","risk":"safe","enabled":true},
-    {"id":"research.reassess","name":"證據後重新判斷","scope":"local","risk":"safe","enabled":true},
-    {"id":"research.execute","name":"執行網路查證","scope":"external","risk":"paid-confirm","enabled":true}
+    {
+      "id": "memory.save",
+      "name": "儲存記憶",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "memory.search",
+      "name": "搜尋記憶",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "task.create",
+      "name": "建立任務",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "task.complete",
+      "name": "完成任務",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "task.classify",
+      "name": "任務分類",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "task.execute",
+      "name": "安全任務執行",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "system.audit",
+      "name": "系統自我審查",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.optimize",
+      "name": "自主優化提案",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "system.validate",
+      "name": "優化結果驗證",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.prioritize",
+      "name": "優化優先級判斷",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.orchestrate",
+      "name": "自主調度",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "system.snapshot",
+      "name": "自主狀態快照",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.recover",
+      "name": "自主循環恢復",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "risk.assess",
+      "name": "主動風險評估",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.self_evolve",
+      "name": "安全自我進化週期",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "system.self_code_plan",
+      "name": "受控自我修改規劃",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "system.self_code_execute",
+      "name": "受控自我修改執行",
+      "scope": "backend",
+      "risk": "confirm",
+      "enabled": true
+    },
+    {
+      "id": "system.self_code_status",
+      "name": "自我修改驗證狀態",
+      "scope": "backend",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.self_code_replan",
+      "name": "自我修改失敗重新規劃",
+      "scope": "backend",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "system.self_code_failure_analysis",
+      "name": "驗證失敗原因分析",
+      "scope": "backend",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "system.self_code_lifecycle",
+      "name": "自我修改生命週期",
+      "scope": "backend",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "dialogue.clarify",
+      "name": "主動澄清提問",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "data.export",
+      "name": "匯出資料",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "intent.route",
+      "name": "意圖路由",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "structured.plan",
+      "name": "結構化規劃",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "external.request",
+      "name": "外部工具請求",
+      "scope": "external",
+      "risk": "confirm",
+      "enabled": true
+    },
+    {
+      "id": "tool.execution",
+      "name": "工具執行循環",
+      "scope": "backend",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "tool.result",
+      "name": "工具結果回傳",
+      "scope": "backend",
+      "risk": "controlled",
+      "enabled": true
+    },
+    {
+      "id": "decision.record",
+      "name": "自主判斷紀錄",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "option.verify",
+      "name": "未知方案驗證",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "research.plan",
+      "name": "研究問題規劃",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "research.record",
+      "name": "研究證據紀錄",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "research.reassess",
+      "name": "證據後重新判斷",
+      "scope": "local",
+      "risk": "safe",
+      "enabled": true
+    },
+    {
+      "id": "research.execute",
+      "name": "執行網路查證",
+      "scope": "external",
+      "risk": "paid-confirm",
+      "enabled": true
+    }
   ]
 }
