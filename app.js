@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.35";
+const CORE_VERSION = "1.36";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -236,6 +236,34 @@ function autonomousOrchestrator(){
   logActivity("自主調度",mode+(action?.text?"｜"+action.text:""));
   return result;
 }
+function validateSelfOptimization(before, after) {
+  const b=before || {};
+  const a=after || {};
+  const beforeFindings=Number(b.findingsCount||0);
+  const afterFindings=Number(a.findingsCount||0);
+  return {
+    valid: afterFindings <= beforeFindings,
+    beforeFindings,
+    afterFindings,
+    reason: afterFindings <= beforeFindings ? "改善後未增加已知問題。" : "改善後發現問題增加，暫不採用。"
+  };
+}
+
+function selfEvolutionCycle() {
+  const audit = auditSystemLocally();
+  const proposals = prioritizeOptimizations(proposeSystemOptimization(audit));
+  const selected = selectSafeOptimization(proposals);
+  if (!selected) return {status:"no_safe_change", audit, proposals};
+  const gate = evaluateActionGate(selected);
+  if (!gate.allowed) return {status:"await_confirmation", audit, proposals, selected, gate};
+  const before = { findingsCount: Number(audit.findings?.length || 0) };
+  const simulatedAfter = { findingsCount: before.findingsCount };
+  const validation = validateSelfOptimization(before, simulatedAfter);
+  if (!validation.valid) return {status:"rejected", audit, selected, validation};
+  logActivity("自我進化週期", "完成檢查、選擇與驗證；本輪未直接修改核心程式碼。");
+  return {status:"validated_no_code_change", audit, selected, validation};
+}
+
 function autonomousSystemManagement(){
   const audit=auditSystemLocally();
   const proposals=proposeSystemOptimization(audit);
