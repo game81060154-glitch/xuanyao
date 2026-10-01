@@ -1,5 +1,5 @@
 {
-  "version": "1.15",
+  "version": "1.16",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -17,7 +17,9 @@
     "unknown_option_exploration_enabled": true,
     "unknown_option_verification_enabled": true,
     "decision_history_enabled": true,
-    "local_context_awareness_enabled": true
+    "local_context_awareness_enabled": true,
+    "research_planning_enabled": true,
+    "verification_queue_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
@@ -31,6 +33,7 @@
     {"id":"tool.execution","name":"工具執行循環","scope":"backend","risk":"controlled","enabled":true},
     {"id":"tool.result","name":"工具結果回傳","scope":"backend","risk":"controlled","enabled":true},
     {"id":"decision.record","name":"自主判斷紀錄","scope":"local","risk":"safe","enabled":true},
-    {"id":"option.verify","name":"未知方案驗證","scope":"local","risk":"safe","enabled":true}
+    {"id":"option.verify","name":"未知方案驗證","scope":"local","risk":"safe","enabled":true},
+    {"id":"research.plan","name":"研究問題規劃","scope":"local","risk":"safe","enabled":true}
   ]
 }
