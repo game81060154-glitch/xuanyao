@@ -1,7 +1,8 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.12";
+const CORE_VERSION = "1.13";
+const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
@@ -245,8 +246,34 @@ function getTaskWorkflow() {
   return pending.slice().sort((a,b)=>{
     const ad=(Array.isArray(a.dependsOn)?a.dependsOn:[]).length;
     const bd=(Array.isArray(b.dependsOn)?b.dependsOn:[]).length;
-    return ad-bd || (a.at||0)-(b.at||0);
+    const ar=canCompleteTask(a)?0:1;
+    const br=canCompleteTask(b)?0:1;
+    return ar-br || ad-bd || (a.at||0)-(b.at||0);
   });
+}
+function getAutomationState() {
+  return readJSON(AUTOMATION_KEY, {enabled:true,lastRun:0,queue:[]});
+}
+function saveAutomationState(state) { writeJSON(AUTOMATION_KEY,state); }
+function renderAutomationState() {
+  const el=document.getElementById("automationState");
+  if(!el) return;
+  const state=getAutomationState();
+  const ready=Array.isArray(state.queue)?state.queue.length:0;
+  el.textContent=state.enabled ? "安全自動化｜就緒 "+ready : "安全自動化｜已停用";
+}
+function runSafeAutomation() {
+  const state=getAutomationState();
+  const workflow=getTaskWorkflow();
+  const ready=workflow.filter(t=>canCompleteTask(t)).slice(0,8);
+  state.enabled=true;
+  state.lastRun=Date.now();
+  state.queue=ready.map(t=>({taskId:t.id,text:t.text,readyAt:Date.now()}));
+  saveAutomationState(state);
+  if(ready.length) logActivity("自動工作流","已整理可安全處理佇列："+ready.map(t=>t.text).join("｜"));
+  else if(tasks.some(t=>!t.done)) logActivity("自動工作流","目前任務均受前置條件限制，未執行未知或外部操作");
+  else logActivity("自動工作流","目前沒有待處理任務");
+  renderAutomationState();
 }
 function renderMemoryTools() {
   const list = document.getElementById("memoryList");
@@ -258,6 +285,7 @@ function renderMemoryTools() {
   ).join("") : "<div class='empty'>目前沒有符合的記憶。</div>";
 }
 function renderTasks() {
+  renderAutomationState();
   const workflow = getTaskWorkflow();
   taskList.innerHTML = workflow.length ? workflow.map(t =>
     `<div class="task ${t.done ? "done" : ""}"><button data-task="${t.id}" class="task-toggle" type="button">${t.done ? "✓" : "○"}</button><span>${escapeHTML(t.text)}${Array.isArray(t.dependsOn) && t.dependsOn.length && !canCompleteTask(t) ? "｜等待前置任務" : ""}</span><button data-delete="${t.id}" class="task-delete" type="button">刪除</button></div>`
@@ -416,3 +444,4 @@ if(planTaskBtn) planTaskBtn.addEventListener("click",()=>{
   ask("請直接分析目前未完成任務，安排最省力的執行順序；只有真正需要新增的下一步才建立任務，不要重複現有待辦。");
 });
 renderMemoryCount();
+runSafeAutomation();
