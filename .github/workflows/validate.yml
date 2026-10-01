@@ -80,7 +80,8 @@ jobs:
             "self_code_status_check",
             "self_code_lifecycle_gate",
             "self_code_failure_isolation",
-            "self_code_replan"
+            "self_code_replan",
+            "self_code_autonomous_cycle"
           ];
           for (const key of requiredCore) {
             if (core.modules[key] !== true) throw new Error("Missing core capability: " + key);
