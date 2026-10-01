@@ -48,3 +48,59 @@ jobs:
           grep -q "actions/deploy-pages@v4" .github/workflows/deploy.yml
           grep -q "needs: validate" .github/workflows/deploy.yml
           echo "Deployment gate OK"
+
+      - name: Validate version consistency
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const core = JSON.parse(fs.readFileSync("config/xuanyao.core.json", "utf8"));
+          const tools = JSON.parse(fs.readFileSync("config/xuanyao.tools.json", "utf8"));
+          const app = fs.readFileSync("app.js", "utf8");
+          const appMatch = app.match(/CORE_VERSION\s*=\s*["']([^"']+)["']/);
+          if (!appMatch) throw new Error("CORE_VERSION not found in app.js");
+          if (core.version !== tools.version || core.version !== appMatch[1]) {
+            throw new Error(`Version mismatch: core=${core.version}, tools=${tools.version}, app=${appMatch[1]}`);
+          }
+          console.log("Version consistency OK:", core.version);
+          NODE
+
+      - name: Validate self-code lifecycle configuration
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const core = JSON.parse(fs.readFileSync("config/xuanyao.core.json", "utf8"));
+          const tools = JSON.parse(fs.readFileSync("config/xuanyao.tools.json", "utf8"));
+          const requiredCore = [
+            "controlled_self_code_execution",
+            "self_code_backup_required",
+            "self_code_validation_required",
+            "self_code_rollback_required",
+            "self_code_lifecycle_tracking",
+            "self_code_safe_branch",
+            "self_code_status_check",
+            "self_code_lifecycle_gate",
+            "self_code_failure_isolation",
+            "self_code_replan"
+          ];
+          for (const key of requiredCore) {
+            if (core.modules[key] !== true) throw new Error("Missing core capability: " + key);
+          }
+          const requiredPolicy = [
+            "controlled_self_code_execution_enabled",
+            "self_code_validation_enabled",
+            "self_code_lifecycle_tracking_enabled",
+            "self_code_safe_branch_enabled",
+            "self_code_status_check_enabled",
+            "self_code_lifecycle_gate_enabled",
+            "self_code_failure_isolation_enabled",
+            "self_code_replan_enabled"
+          ];
+          for (const key of requiredPolicy) {
+            if (tools.policy[key] !== true) throw new Error("Missing tool policy: " + key);
+          }
+          const ids = new Set(tools.tools.map(x => x.id));
+          for (const id of ["system.self_code_plan","system.self_code_execute","system.self_code_status","system.self_code_replan","system.self_code_lifecycle"]) {
+            if (!ids.has(id)) throw new Error("Missing tool: " + id);
+          }
+          console.log("Self-code lifecycle configuration OK");
+          NODE
