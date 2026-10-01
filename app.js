@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.15";
+const CORE_VERSION = "1.16";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -201,6 +201,21 @@ function applyStructuredActions(data, sourceText, reply) {
     if (assessmentText || optionText || decisionText) add("system", [assessmentText, optionText, decisionText].filter(Boolean).join("\n"));
   }
   executeToolActions(data.toolActions);
+  const research = Array.isArray(data.research) ? data.research.slice(0, 6) : [];
+  research.forEach(item => {
+    const question = String(item?.question || "").trim();
+    if (!question) return;
+    const purpose = String(item?.purpose || "確認未知資訊").trim();
+    const priority = String(item?.priority || "normal").trim();
+    const taskText = "查證：" + question + "｜目的：" + purpose + "｜優先級：" + priority;
+    if (!tasks.some(t => !t.done && t.text === taskText)) createTask(taskText);
+  });
+  if (research.length) {
+    add("system", "玄曜研究佇列：\n" + research.map(x =>
+      "• " + String(x.question || "") + "｜" + String(x.purpose || "查證") + "｜" + String(x.priority || "normal")
+    ).join("\n"));
+    logActivity("研究規劃", "已建立 " + research.length + " 項查證問題");
+  }
   const memoriesFromAI = Array.isArray(data.memories) ? data.memories : [];
   const tasksFromAI = Array.isArray(data.tasks) ? data.tasks : [];
   const toolRequests = Array.isArray(data.toolRequests) ? data.toolRequests : [];
