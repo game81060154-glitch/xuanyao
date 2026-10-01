@@ -47,6 +47,8 @@
     "goal_over_maintenance_priority_enabled": true,
     "autonomy_snapshots_enabled": true,
     "loop_detection_enabled": true,
+    "autonomy_loop_guard_enabled": true,
+    "safe_replan_on_loop_enabled": true,
     "recovery_history_enabled": true
   },
   "tools": [
