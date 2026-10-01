@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.5";
+const CORE_VERSION = "1.6";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 
 const chat = document.getElementById("chat");
@@ -34,6 +34,29 @@ let tasks = readJSON(TASK_KEY, []);
 let memories = readJSON(MEMORY_KEY, []);
 
 function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); renderMemoryTools(); }
+function makeId() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
+function saveMemory(text, source="xuanyao") {
+  const clean=String(text||"").trim();
+  if(!clean) return false;
+  memories.unshift({id:makeId(),type:"note",content:clean,source,createdAt:Date.now(),updatedAt:Date.now(),pinned:false});
+  saveMemories(); return true;
+}
+function createTask(text, parentId=null) {
+  const clean=String(text||"").trim();
+  if(!clean) return false;
+  tasks.unshift({id:makeId(),text:clean,done:false,at:Date.now(),parentId});
+  writeJSON(TASK_KEY,tasks); renderTasks(); return true;
+}
+function routeLocalIntent(text, reply="") {
+  const lower=String(text).toLowerCase();
+  let changed=false;
+  if(/記住|記錄|保存|存起來|記憶/.test(lower)) changed=saveMemory(text,"user")||changed;
+  if(/建立任務|新增任務|提醒我|待辦|要做/.test(lower)) {
+    changed=createTask(text)||changed;
+  }
+  if(/目前|現在|進度|專案/.test(lower) && reply) saveMemory("玄曜回應摘要："+reply,"xuanyao");
+  return changed;
+}
 function renderMemoryCount() { const el=document.getElementById("memoryCount"); if(el) el.textContent=`記憶 ${memories.length}`; }
 function saveMessages() {
   messages = messages.slice(-300);
@@ -104,7 +127,9 @@ async function ask(text) {
     });
     if (!res.ok) throw new Error("backend");
     const data = await res.json();
-    add("system", data.reply || "後端沒有提供回應。");
+    const reply = data.reply || "後端沒有提供回應。";
+    add("system", reply);
+    routeLocalIntent(clean, reply);
     backendState.textContent = "Connected";
   } catch {
     const reply = demoReplies[Math.floor(Math.random() * demoReplies.length)];
