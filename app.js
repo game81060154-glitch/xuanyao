@@ -175,6 +175,8 @@ function autonomousOrchestrator(){
     mode="review";
   }
   const result={at:Date.now(),mode,goal,system,action};
+  const snapshot=createAutonomySnapshot(result);
+  result.snapshotId=snapshot.id;
   logActivity("自主調度",mode+(action?.text?"｜"+action.text:""));
   return result;
 }
