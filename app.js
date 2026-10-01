@@ -8,6 +8,7 @@ const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
 const DECISION_KEY = "xuanyao.decisions.v1";
 const TOOL_RUN_KEY = "xuanyao.toolRuns.v1";
+const RESEARCH_KEY = "xuanyao.research.v1";
 
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
@@ -40,6 +41,7 @@ let memories = readJSON(MEMORY_KEY, []);
 let approvals = readJSON(APPROVAL_KEY, []);
 let activities = readJSON(ACTIVITY_KEY, []);
 let decisions = readJSON(DECISION_KEY, []);
+let researchRecords = readJSON(RESEARCH_KEY, []);
 
 function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); renderMemoryTools(); }
 function makeId() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
@@ -97,6 +99,23 @@ function renderDecisions() {
   el.innerHTML=decisions.slice(0,10).map(d =>
     `<div class="activity-item"><b>自主判斷</b><time>${new Date(d.at).toLocaleString()}</time><p>${escapeHTML(d.assessment || "已完成判斷")}</p><p>${escapeHTML(d.decision || "尚未形成明確決策")}</p></div>`
   ).join("") || "<div class='empty'>尚無自主判斷紀錄。</div>";
+}
+function saveResearchRecord(item) {
+  const question=String(item?.question||"").trim();
+  if(!question) return false;
+  const record={id:makeId(),question,source:String(item.source||"user").trim(),summary:String(item.summary||"").trim(),confidence:String(item.confidence||"unknown").trim(),status:String(item.status||"pending").trim(),verifiedAt:item.verifiedAt||null,createdAt:Date.now(),updatedAt:Date.now()};
+  researchRecords.unshift(record);
+  researchRecords=researchRecords.slice(0,200);
+  writeJSON(RESEARCH_KEY,researchRecords);
+  renderResearch();
+  return true;
+}
+function renderResearch() {
+  const el=document.getElementById("researchList");
+  if(!el) return;
+  el.innerHTML=researchRecords.slice(0,20).map(r=>
+    `<div class="activity-item"><b>${escapeHTML(r.status||"pending")}</b><time>${new Date(r.updatedAt||r.createdAt).toLocaleString()}</time><p>${escapeHTML(r.question)}</p><p>${escapeHTML(r.summary||"尚無證據摘要")}｜信心：${escapeHTML(r.confidence||"unknown")}</p></div>`
+  ).join("") || "<div class='empty'>尚無研究證據紀錄。</div>";
 }
 function logActivity(type, text) {
   activities.unshift({ id: makeId(), type, text: String(text || ""), at: Date.now() });
@@ -203,6 +222,7 @@ function applyStructuredActions(data, sourceText, reply) {
   executeToolActions(data.toolActions);
   const research = Array.isArray(data.research) ? data.research.slice(0, 6) : [];
   research.forEach(item => {
+    saveResearchRecord({question:item?.question,purpose:item?.purpose,status:"planned",summary:"已建立查證問題，尚未取得外部證據。",confidence:"unverified"});
     const question = String(item?.question || "").trim();
     if (!question) return;
     const purpose = String(item?.purpose || "確認未知資訊").trim();
@@ -409,7 +429,7 @@ clearBtn.addEventListener("click", () => {
 dataSearch.addEventListener("input", () => { renderData(); renderMemoryTools(); });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
-  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities, decisions, automation: getAutomationState() };
+  const payload = { version: CORE_VERSION, exportedAt: new Date().toISOString(), messages, tasks, memories, approvals, activities, decisions, researchRecords, automation: getAutomationState() };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -429,9 +449,10 @@ document.getElementById("importFile").addEventListener("change", async e => {
     if (Array.isArray(payload.approvals)) approvals = payload.approvals;
     if (Array.isArray(payload.activities)) activities = payload.activities;
     if (Array.isArray(payload.decisions)) decisions = payload.decisions;
+    if (Array.isArray(payload.researchRecords)) researchRecords = payload.researchRecords;
     if (payload.automation && typeof payload.automation === "object") saveAutomationState(payload.automation);
     saveMessages(); writeJSON(TASK_KEY, tasks); writeJSON(MEMORY_KEY, memories);
-    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities); writeJSON(DECISION_KEY, decisions);
+    writeJSON(APPROVAL_KEY, approvals); writeJSON(ACTIVITY_KEY, activities); writeJSON(DECISION_KEY, decisions); writeJSON(RESEARCH_KEY, researchRecords);
     render(); renderData(); renderTasks(); renderMemoryCount(); renderMemoryTools(); renderApprovals(); renderActivities();
   } catch { alert("匯入失敗：檔案不是有效的玄曜 JSON 備份。"); }
   e.target.value = "";
@@ -464,7 +485,7 @@ render();
 renderData();
 renderTasks();
 renderApprovals();
-renderActivities(); renderDecisions();
+renderActivities(); renderDecisions(); renderResearch();
 
 const gatewayInput = document.getElementById("gatewayInput");
 const saveGatewayBtn = document.getElementById("saveGatewayBtn");
