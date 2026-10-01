@@ -1,8 +1,10 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.7";
+const CORE_VERSION = "1.8";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
+const APPROVAL_KEY = "xuanyao.approvals.v1";
+const ACTIVITY_KEY = "xuanyao.activity.v1";
 
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
@@ -32,6 +34,8 @@ function writeJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)
 let messages = readJSON(KEY, []);
 let tasks = readJSON(TASK_KEY, []);
 let memories = readJSON(MEMORY_KEY, []);
+let approvals = readJSON(APPROVAL_KEY, []);
+let activities = readJSON(ACTIVITY_KEY, []);
 
 function saveMemories() { memories = memories.slice(-500); writeJSON(MEMORY_KEY, memories); renderMemoryCount(); renderMemoryTools(); }
 function makeId() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
@@ -57,6 +61,44 @@ function routeLocalIntent(text, reply="") {
   if(/目前|現在|進度|專案/.test(lower) && reply) saveMemory("玄曜回應摘要："+reply,"xuanyao");
   return changed;
 }
+function logActivity(type, text) {
+  activities.unshift({ id: makeId(), type, text: String(text || ""), at: Date.now() });
+  activities = activities.slice(0, 100);
+  writeJSON(ACTIVITY_KEY, activities);
+  renderActivities();
+}
+function renderActivities() {
+  const el = document.getElementById("activityList");
+  if (!el) return;
+  el.innerHTML = activities.length ? activities.slice(0, 30).map(a =>
+    `<div class="activity-item"><b>${escapeHTML(a.type || "執行")}</b><time>${new Date(a.at).toLocaleString()}</time><p>${escapeHTML(a.text)}</p></div>`
+  ).join("") : "<div class='empty'>尚無執行紀錄。</div>";
+}
+function renderApprovals() {
+  const el = document.getElementById("approvalList");
+  if (!el) return;
+  const pending = approvals.filter(a => a.status === "pending");
+  el.innerHTML = pending.length ? pending.map(a =>
+    `<div class="approval-item"><b>${escapeHTML(a.toolId || "外部工具")}</b><p>${escapeHTML(a.reason || "玄曜提出外部操作需求。")}</p><div class="approval-actions"><button data-approve="${a.id}" type="button">確認</button><button data-reject="${a.id}" type="button">拒絕</button></div></div>`
+  ).join("") : "<div class='empty'>目前沒有需要確認的外部操作。</div>";
+}
+function addApproval(item) {
+  const approval = { id: makeId(), toolId: item.toolId || "external.request", reason: item.reason || "玄曜提出外部操作需求。", status: "pending", at: Date.now() };
+  approvals.unshift(approval);
+  approvals = approvals.slice(0, 50);
+  writeJSON(APPROVAL_KEY, approvals);
+  renderApprovals();
+  logActivity("待確認", approval.toolId + "｜" + approval.reason);
+}
+function applyApproval(id, status) {
+  const item = approvals.find(a => a.id === id);
+  if (!item) return;
+  item.status = status;
+  item.resolvedAt = Date.now();
+  writeJSON(APPROVAL_KEY, approvals);
+  renderApprovals();
+  logActivity(status === "approved" ? "已確認" : "已拒絕", item.toolId + "｜" + item.reason + (status === "approved" ? "｜等待對應外部工具執行" : ""));
+}
 function renderMemoryCount() { const el=document.getElementById("memoryCount"); if(el) el.textContent=`記憶 ${memories.length}`; }
 function applyStructuredActions(data, sourceText, reply) {
   const memoriesFromAI = Array.isArray(data.memories) ? data.memories : [];
@@ -72,11 +114,16 @@ function applyStructuredActions(data, sourceText, reply) {
   });
 
   if (toolRequests.length) {
-    const summary = toolRequests.slice(0, 5).map(x =>
+    const pending = toolRequests.slice(0, 5);
+    pending.forEach(item => {
+      if (item && item.requiresConfirmation !== false) addApproval(item);
+      else logActivity("本機工具", (item.toolId || "未知工具") + "｜" + (item.reason || "已提出"));
+    });
+    const summary = pending.map(x =>
       "• " + (x.toolId || "未知工具") + "｜" + (x.reason || "需要工具處理") +
-      (x.requiresConfirmation ? "｜需你確認" : "")
+      (x.requiresConfirmation ? "｜已放入待確認" : "｜本機安全")
     ).join("\n");
-    add("system", "玄曜工具提案（尚未執行）：\n" + summary);
+    add("system", "玄曜工具提案：\n" + summary);
   }
 
   if (memoriesFromAI.length || tasksFromAI.length || toolRequests.length) {
