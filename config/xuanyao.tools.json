@@ -1,5 +1,5 @@
 {
-  "version": "1.18",
+  "version": "1.19",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -23,7 +23,11 @@
     "research_evidence_store_enabled": true,
     "evidence_lifecycle_enabled": true,
     "controlled_web_research_enabled": true,
-    "evidence_reassessment_enabled": true
+    "evidence_reassessment_enabled": true,
+    "evidence_quality_enabled": true,
+    "conflict_detection_enabled": true,
+    "minimal_followup_research_enabled": true,
+    "goal_satisfaction_review_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
