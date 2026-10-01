@@ -7,7 +7,9 @@
     "paid_or_irreversible_actions_require_confirmation": true,
     "structured_ai_actions_enabled": true,
     "real_tool_execution_enabled": true,
-    "tool_result_return_enabled": true
+    "tool_result_return_enabled": true,
+    "result_validation_enabled": true,
+    "failure_recovery_enabled": true
   },
   "tools": [
     {"id":"memory.save","name":"儲存記憶","scope":"local","risk":"safe","enabled":true},
