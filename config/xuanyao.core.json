@@ -66,6 +66,8 @@
     "autonomy_loop_guard": true,
     "safe_replan_on_loop": true,
     "autonomy_loop_recovery": true,
+    "proactive_clarification": true,
+    "minimal_question_policy": true,
     "recovery_replan": true,
     "recovery_history": true
   },
