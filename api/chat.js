@@ -19,11 +19,13 @@ export default async function handler(req, res) {
   const memoryContext = Array.isArray(localContext.memories) ? localContext.memories.slice(0, 12) : [];
   const taskContext = Array.isArray(localContext.tasks) ? localContext.tasks.slice(0, 12) : [];
   const approvalContext = Array.isArray(localContext.pendingApprovals) ? localContext.pendingApprovals.slice(0, 8) : [];
+  const researchContext = Array.isArray(localContext.researchRecords) ? localContext.researchRecords.slice(0, 10) : [];
   const contextMessage = {
     role: "user",
     content: "[玄曜本機狀態]\n記憶:\n" + JSON.stringify(memoryContext) +
       "\n目前任務:\n" + JSON.stringify(taskContext) +
-      "\n待確認操作:\n" + JSON.stringify(approvalContext)
+      "\n待確認操作:\n" + JSON.stringify(approvalContext) +
+      "\n研究證據:\n" + JSON.stringify(researchContext)
   };
   const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
   let input = history
