@@ -428,9 +428,14 @@ function executeNextSafeTask(){
   const result=executeTaskLocally(task);
   if(result.ok){
     task.lastExecution={at:Date.now(),type:result.type,status:"success",detail:result.reason};
+    task.done=true;
+    task.completedAt=Date.now();
     writeJSON(TASK_KEY,tasks); renderTasks();
-    logActivity("任務執行",task.text+"｜"+result.reason);
-    return result;
+    const recoveryState=readJSON(RECOVERY_KEY,{});
+    delete recoveryState[task.id];
+    writeJSON(RECOVERY_KEY,recoveryState);
+    logActivity("任務完成",task.text+"｜"+result.reason);
+    return {...result,completed:true};
   }
   task.lastExecution={at:Date.now(),status:result.blocked?"blocked":"failed",detail:result.reason};
   writeJSON(TASK_KEY,tasks); renderTasks();
@@ -941,14 +946,12 @@ async function runAutonomousMissionTick(){
   const now=Date.now();
   if(!state.enabled || state.running || now-(state.lastRun||0)<30000) return state;
   if(!goalState?.goal) return {...state,lastStatus:"waiting_for_goal",updatedAt:now};
-  const health=readJSON(BACKEND_HEALTH_KEY,{});
   const gateway=localStorage.getItem(GATEWAY_KEY)||"/api/chat";
-  if(health.reachable===false && gateway==="/api/chat") return {...state,lastStatus:"waiting_for_backend",updatedAt:now};
-
   const next={...state,running:true,lastRun:now,cycles:Number(state.cycles||0)+1,updatedAt:now};
   saveAutonomousMissionState(next);
   coreState.textContent="自主運行中｜玄曜持續推進目標";
   try{
+    const localBefore=autonomousGoalCycle(3);
     const history=messages.slice(-8).map(x=>({role:x.role==="user"?"user":"assistant",text:x.text}));
     const payload={
       message:
@@ -966,15 +969,24 @@ async function runAutonomousMissionTick(){
         pendingApprovals:approvals.filter(a=>a.status==="pending").slice(0,8)
       }
     };
-    const res=await fetch(gateway,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok) throw new Error(data?.error||"autonomous backend");
-    const reply=String(data.reply||"").trim();
-    if(reply) add("system","【自主進度】"+reply);
-    applyStructuredActions(data,payload.message,reply);
-    const updated={...getAutonomousMissionState(),running:false,lastStatus:"progressed",lastError:"",updatedAt:Date.now()};
+    let backendStatus="skipped";
+    let data={};
+    try{
+      const res=await fetch(gateway,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data?.error||"autonomous backend");
+      backendStatus="connected";
+      const reply=String(data.reply||"").trim();
+      if(reply) add("system","【自主進度】"+reply);
+      applyStructuredActions(data,payload.message,reply);
+    }catch(error){
+      backendStatus="unavailable";
+      logActivity("自主規劃暫停","AI 後端目前不可用；本輪仍保留本機安全執行結果。");
+    }
+    const localAfter=autonomousGoalCycle(3);
+    const updated={...getAutonomousMissionState(),running:false,lastStatus:"progressed",lastError:"",lastLocalBefore:localBefore,lastLocalAfter:localAfter,backendStatus,updatedAt:Date.now()};
     saveAutonomousMissionState(updated);
-    logActivity("自主目標循環","已完成一輪目標檢查與受控推進。");
+    logActivity("自主目標循環","本輪完成：本機安全執行＋可用時 AI 規劃；不需逐項人工確認。");
     return updated;
   }catch(error){
     const updated={...getAutonomousMissionState(),running:false,lastStatus:"error",lastError:String(error?.message||error).slice(0,300),updatedAt:Date.now()};
