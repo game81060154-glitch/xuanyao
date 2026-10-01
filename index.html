@@ -33,7 +33,8 @@
     <section id="chat" class="chat" aria-live="polite"></section>
 
     <section class="panel">
-      <div class="panel-title">資料中心</div>
+      <div class="panel-title">記憶與資料中心</div>
+      <div class="memory-tools"><button id="saveMemoryBtn" type="button">將目前輸入存為記憶</button><button id="clearMemoryBtn" type="button">清除本機記憶</button><span id="memoryCount">記憶 0</span></div>
       <div class="data-tools">
         <input id="dataSearch" type="search" placeholder="搜尋已保存的資料…">
         <button id="exportBtn" type="button">匯出</button>
@@ -43,7 +44,8 @@
     </section>
 
     <section class="panel">
-      <div class="panel-title">任務中心</div>
+      <div class="panel-title">任務中心｜自動拆解</div>
+      <div class="task-tools"><button id="planTaskBtn" type="button">用玄曜拆解目前任務</button></div>
       <form id="taskForm" class="task-form">
         <input id="taskInput" placeholder="新增任務，例如：完成玄曜 AI 後端" autocomplete="off">
         <button type="submit">新增</button>
@@ -69,7 +71,7 @@
       <button type="submit" aria-label="送出">➤</button>
     </form>
 
-    <footer>玄曜 Web 版 1.2 · 手機優先 · 可離線 · 資料留在你的裝置</footer>
+    <footer>玄曜 Web 版 1.4 · 手機優先 · 可離線 · 資料留在你的裝置</footer>
   </main>
   <script src="app.js"></script>
 </body>
