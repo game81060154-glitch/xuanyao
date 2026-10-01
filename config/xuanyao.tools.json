@@ -1,5 +1,5 @@
 {
-  "version": "1.16",
+  "version": "1.17",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
