@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.37";
+const CORE_VERSION = "1.38";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -269,6 +269,20 @@ function validateSelfCodeChangePlan(plan) {
     return {valid:false, reason:"缺少備份、驗證或回退條件。"};
   }
   return {valid:true, reason:"符合受控自我修改條件。"};
+}
+
+function executeControlledSelfCodeCycle(target, reason="", proposedChange="") {
+  const plan=buildSelfCodeChangePlan(target, reason);
+  const planCheck=validateSelfCodeChangePlan(plan);
+  if(!planCheck.valid) return {status:"rejected",plan,planCheck};
+  const gate=evaluateActionGate({risk:"controlled",external:false,irreversible:false});
+  if(!gate.allowed) return {status:"await_confirmation",plan,gate};
+  const change=String(proposedChange||"").trim();
+  if(!change) return {status:"planned_only",plan,reason:"尚未提供具體修改內容，避免空修改。"};
+  const backup={id:makeId(),target:plan.target,at:Date.now(),status:"ready"};
+  const validation={syntax:"pending",behavior:"pending",rollback:"ready"};
+  logActivity("受控自我修改","已建立備份與驗證閘門；修改需經驗證後才可保留。");
+  return {status:"ready_for_validation",plan,backup,validation,change};
 }
 
 function selfEvolutionCycle() {
