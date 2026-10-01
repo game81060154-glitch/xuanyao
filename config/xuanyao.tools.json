@@ -36,6 +36,9 @@
     "goal_recovery_loop_enabled": true,
     "goal_management_enabled": true,
     "goal_state_review_enabled": true,
+    "system_self_audit_enabled": true,
+    "autonomous_optimization_enabled": true,
+    "optimization_risk_gate_enabled": true,
     "recovery_history_enabled": true
   },
   "tools": [
@@ -45,6 +48,8 @@
     {"id":"task.complete","name":"完成任務","scope":"local","risk":"safe","enabled":true},
     {"id":"task.classify","name":"任務分類","scope":"local","risk":"safe","enabled":true},
     {"id":"task.execute","name":"安全任務執行","scope":"local","risk":"controlled","enabled":true},
+    {"id":"system.audit","name":"系統自我審查","scope":"local","risk":"safe","enabled":true},
+    {"id":"system.optimize","name":"自主優化提案","scope":"local","risk":"controlled","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
     {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
