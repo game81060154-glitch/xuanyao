@@ -15,11 +15,21 @@ export default async function handler(req, res) {
   const message = String(body.message || "").trim();
   if (!message) return res.status(400).json({ error: "Message is required." });
 
+  const localContext = body.context && typeof body.context === "object" ? body.context : {};
+  const memoryContext = Array.isArray(localContext.memories) ? localContext.memories.slice(0, 12) : [];
+  const taskContext = Array.isArray(localContext.tasks) ? localContext.tasks.slice(0, 12) : [];
+  const approvalContext = Array.isArray(localContext.pendingApprovals) ? localContext.pendingApprovals.slice(0, 8) : [];
+  const contextMessage = {
+    role: "user",
+    content: "[玄曜本機狀態]\n記憶:\n" + JSON.stringify(memoryContext) +
+      "\n目前任務:\n" + JSON.stringify(taskContext) +
+      "\n待確認操作:\n" + JSON.stringify(approvalContext)
+  };
   const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
   let input = history
     .filter(x => x && (x.role === "user" || x.role === "assistant") && typeof x.text === "string")
     .map(x => ({ role: x.role, content: x.text }))
-    .concat([{ role: "user", content: message }]);
+    .concat([contextMessage, { role: "user", content: message }]);
 
   const schema = {
     type: "object", additionalProperties: false,
