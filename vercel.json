@@ -21,6 +21,9 @@
     },
     "api/self-code-replan.js": {
       "maxDuration": 30
+    },
+    "api/health.js": {
+      "maxDuration": 10
     }
   }
 }
