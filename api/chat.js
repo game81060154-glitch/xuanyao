@@ -85,6 +85,7 @@ export default async function handler(req, res) {
   let response;
 
   for (let round = 0; round < 4; round++) {
+    request.input = input;
     response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
