@@ -61,6 +61,8 @@
     "single_change_guard": true,
     "autonomous_orchestration": true,
     "goal_over_maintenance_priority": true,
+    "autonomy_snapshots": true,
+    "loop_detection": true,
     "recovery_history": true
   },
   "memory": {
