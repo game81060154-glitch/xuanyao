@@ -10,6 +10,7 @@ const DECISION_KEY = "xuanyao.decisions.v1";
 const TOOL_RUN_KEY = "xuanyao.toolRuns.v1";
 const RESEARCH_KEY = "xuanyao.research.v1";
 const GOAL_KEY = "xuanyao.goal.v1";
+const RECOVERY_KEY = "xuanyao.recovery.v1";
 
 const chat = document.getElementById("chat");
 const composer = document.getElementById("composer");
@@ -65,12 +66,28 @@ function canCompleteTask(task) {
   const deps=Array.isArray(task.dependsOn)?task.dependsOn:[];
   return deps.every(id => { const dep=tasks.find(t=>t.id===id); return Boolean(dep) && dep.done; });
 }
+function recoverFailedTask(taskId, reason="未知失敗"){
+  const state=readJSON(RECOVERY_KEY, {});
+  const item=tasks.find(t=>t.id===taskId); if(!item)return;
+  const key=String(taskId);
+  const count=Number(state[key]?.attempts||0)+1;
+  state[key]={attempts:count,lastReason:String(reason).slice(0,300),at:Date.now()};
+  writeJSON(RECOVERY_KEY,state);
+  if(count>=3){
+    item.blocked=true; item.blockReason="同一任務已連續失敗 3 次，玄曜暫停自動重試。";
+    writeJSON(TASK_KEY,tasks); renderTasks(); logActivity("安全停機",item.text+"｜"+item.blockReason); return;
+  }
+  item.blocked=false;
+  writeJSON(TASK_KEY,tasks); renderTasks();
+  logActivity("失敗恢復",item.text+"｜第 "+count+" 次嘗試｜原因："+reason+"｜改由玄曜重新規劃");
+}
 function completeTask(id) {
   const task=tasks.find(t=>t.id===id);
   if(!task) return;
   if(!canCompleteTask(task)){ logActivity("任務阻擋","尚有前置任務未完成｜"+task.text); return; }
   task.done=!task.done; task.completedAt=task.done?Date.now():null;
   writeJSON(TASK_KEY,tasks); renderTasks();
+  if(task.done){ const state=readJSON(RECOVERY_KEY,{}); delete state[id]; writeJSON(RECOVERY_KEY,state); }
   logActivity(task.done?"任務完成":"任務重開",task.text);
 }
 function routeLocalIntent(text, reply="") {
@@ -401,7 +418,7 @@ function searchMemories(query="", limit=10) {
   return memories.slice().sort((a,b)=>memoryScore(b,query)-memoryScore(a,query)).slice(0,limit);
 }
 function getTaskWorkflow() {
-  const pending=tasks.filter(t=>!t.done);
+  const pending=tasks.filter(t=>!t.done&&!t.blocked);
   return pending.slice().sort((a,b)=>{
     const ad=(Array.isArray(a.dependsOn)?a.dependsOn:[]).length;
     const bd=(Array.isArray(b.dependsOn)?b.dependsOn:[]).length;
@@ -437,7 +454,6 @@ function runSafeAutomation() {
 }
 function executeGoalLoopLocal(){
   runSafeAutomation();
-if(goalState?.goal) executeGoalLoopLocal();
   const state=getAutomationState();
   const next=state.nextTask;
   if(!next){logActivity("目標循環","目前沒有可安全執行的下一步；需要外部操作或前置條件。");return;}
