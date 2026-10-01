@@ -1107,3 +1107,4 @@ renderMemoryCount();
 if(goalInput){goalInput.value=goalState?.goal||""; document.getElementById("saveGoalBtn")?.addEventListener("click",()=>{const g=goalInput.value.trim();if(!g)return;goalState={goal:g,status:"未審查",completion:0,evidence:[],missing:[],nextStep:"",reviewedAt:null};writeJSON(GOAL_KEY,goalState);renderGoal();reviewGoal();});}
 runSafeAutomation();
 startAutonomousMaintenance();
+setInterval(startAutonomousMaintenance,60000);
