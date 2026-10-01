@@ -63,6 +63,8 @@
     "goal_over_maintenance_priority": true,
     "autonomy_snapshots": true,
     "loop_detection": true,
+    "autonomy_loop_guard": true,
+    "safe_replan_on_loop": true,
     "recovery_history": true
   },
   "memory": {
