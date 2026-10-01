@@ -65,6 +65,8 @@
     "loop_detection": true,
     "autonomy_loop_guard": true,
     "safe_replan_on_loop": true,
+    "autonomy_loop_recovery": true,
+    "recovery_replan": true,
     "recovery_history": true
   },
   "memory": {
