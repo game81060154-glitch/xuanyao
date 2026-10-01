@@ -1,0 +1,107 @@
+name: Xuanyao Continuous Mission
+
+on:
+  schedule:
+    - cron: "7/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: xuanyao-continuous-mission
+  cancel-in-progress: false
+
+jobs:
+  mission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run persistent planning cycle
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning::OPENAI_API_KEY 尚未設定；玄曜雲端長時間循環尚未啟動。"
+            exit 0
+          fi
+
+          python - <<'PY'
+          import json, os, subprocess, urllib.request, datetime
+
+          repo=os.environ["REPO"]
+          goal=json.load(open("data/mission.json",encoding="utf-8"))
+          files=[]
+          for path in ["README.md","config/xuanyao.core.json","config/xuanyao.tools.json","app.js","api/chat.js","api/research.js"]:
+              try:
+                  text=open(path,encoding="utf-8").read()
+                  files.append({"path":path,"content":text[:12000]})
+              except Exception:
+                  pass
+
+          prompt=("你是玄曜的長時間自主規劃核心。"
+                  "你的任務不是聊天，而是持續找出讓玄曜更可靠、更自主、更可恢復、更適合手機使用的下一個最小步驟。"
+                  "每一輪只提出一個最重要且可驗證的下一步。"
+                  "不要假裝程式已修改；不要要求使用者逐項確認低風險規劃。"
+                  "涉及付款、帳號、權限、不可逆外部操作時標記為需要人工確認。"
+                  "\n最終目標："+goal["goal"]+
+                  "\n目前專案資料："+json.dumps(files,ensure_ascii=False))
+
+          body=json.dumps({
+              "model": os.environ.get("OPENAI_MODEL") or "gpt-5.6-luna",
+              "input": prompt,
+              "text":{"format":{"type":"json_schema","name":"xuanyao_mission","strict":True,"schema":{
+                  "type":"object","additionalProperties":False,
+                  "properties":{
+                      "status":{"type":"string"},
+                      "nextStep":{"type":"string"},
+                      "reason":{"type":"string"},
+                      "verification":{"type":"string"},
+                      "risk":{"type":"string"},
+                      "requiresConfirmation":{"type":"boolean"}
+                  },
+                  "required":["status","nextStep","reason","verification","risk","requiresConfirmation"]
+              }}},
+              "max_output_tokens":700,
+              "store":False
+          }).encode()
+
+          req=urllib.request.Request(
+              "https://api.openai.com/v1/responses",
+              data=body,
+              headers={"Content-Type":"application/json","Authorization":"Bearer "+os.environ["OPENAI_API_KEY"]})
+          with urllib.request.urlopen(req,timeout=60) as r:
+              data=json.load(r)
+
+          result=json.loads(data.get("output_text","{}"))
+          now=datetime.datetime.now(datetime.timezone.utc).isoformat()
+          title="玄曜｜持續自主規劃狀態"
+          marker="<!-- xuanyao-mission-state -->"
+          body_text=(marker+"\n"
+              +"**最後循環：** "+now+"\n\n"
+              +"**狀態：** "+result["status"]+"\n\n"
+              +"**下一步：** "+result["nextStep"]+"\n\n"
+              +"**原因：** "+result["reason"]+"\n\n"
+              +"**驗證：** "+result["verification"]+"\n\n"
+              +"**風險：** "+result["risk"]+"\n\n"
+              +"**需要人工確認：** "+str(result["requiresConfirmation"]))
+
+          out=open("/tmp/mission.md","w",encoding="utf-8"); out.write(body_text); out.close()
+          found=subprocess.check_output(
+              ["gh","issue","list","--repo",repo,"--state","open","--search",title+" in:title","--json","number,title"],
+              text=True)
+          items=json.loads(found)
+          if items:
+              subprocess.run(["gh","issue","edit",str(items[0]["number"]),"--repo",repo,"--body-file","/tmp/mission.md"],check=True)
+          else:
+              subprocess.run(["gh","issue","create","--repo",repo,"--title",title,"--body-file","/tmp/mission.md"],check=True)
+
+          print("玄曜持續自主規劃循環完成：", result["nextStep"])
+          PY
