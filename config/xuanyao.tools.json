@@ -1,5 +1,5 @@
 {
-  "version":"1.37",
+  "version":"1.38",
   "name": "玄曜工具層",
   "policy": {
     "local_safe_tools_auto_run": true,
@@ -71,7 +71,8 @@
     {"id":"system.recover","name":"自主循環恢復","scope":"local","risk":"controlled","enabled":true},
     {"id":"risk.assess",
     {"id":"system.self_evolve","name":"安全自我進化週期","scope":"local","risk":"controlled","enabled":true},
-    {"id":"system.self_code_plan","name":"受控自我修改規劃","scope":"local","risk":"controlled","enabled":true},"name":"主動澄清提問","scope":"local","risk":"safe","enabled":true},
+    {"id":"system.self_code_plan","name":"受控自我修改規劃","scope":"local","risk":"controlled","enabled":true},
+    {"id":"system.self_code_execute","name":"受控自我修改執行","scope":"local","risk":"controlled","enabled":true},"name":"主動澄清提問","scope":"local","risk":"safe","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
     {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
