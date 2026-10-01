@@ -1,6 +1,6 @@
 {
   "name": "玄曜",
-  "version": "1.20",
+  "version": "1.22",
   "role": "專屬 AI 工作中樞",
   "principles": [
     "先理解目標，再拆解任務",
@@ -43,7 +43,10 @@
     "evidence_quality": true,
     "conflict_detection": true,
     "minimal_followup_research": true,
-    "goal_satisfaction_review": true
+    "goal_satisfaction_review": true,
+    "bounded_failure_recovery": true,
+    "safe_stop": true,
+    "recovery_history": true
   },
   "memory": {
     "local_storage_key": "xuanyao.memory.v1",
