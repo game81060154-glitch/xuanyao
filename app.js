@@ -1293,4 +1293,13 @@ runSafeAutomation();
 checkBackendHealth().catch(()=>{});
 runMaintenanceAudit().catch(()=>{});
 startAutonomousMaintenance();
+
+// 手機／瀏覽器暫停後恢復時，立即補跑一次；不依賴背景計時器長時間存活。
+function resumeAutonomousMission(){
+  if(document.visibilityState==="visible" && navigator.onLine) startAutonomousMaintenance();
+}
+window.addEventListener("pageshow",resumeAutonomousMission);
+document.addEventListener("visibilitychange",resumeAutonomousMission);
+window.addEventListener("online",resumeAutonomousMission);
+
 setInterval(startAutonomousMaintenance,15000);
