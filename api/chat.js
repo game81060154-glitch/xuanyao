@@ -24,6 +24,16 @@ export default async function handler(req, res) {
   const schema = {
     type: "object", additionalProperties: false,
     properties: {
+      assessment: { type: "string" },
+      options: { type: "array", items: {
+        type: "object", additionalProperties: false,
+        properties: {
+          name: { type: "string" }, description: { type: "string" },
+          risk: { type: "string" }, known: { type: "boolean" }
+        },
+        required: ["name", "description", "risk", "known"]
+      }},
+      decision: { type: "string" },
       reply: { type: "string" },
       memories: { type: "array", items: {
         type: "object", additionalProperties: false,
@@ -44,7 +54,7 @@ export default async function handler(req, res) {
         required: ["toolId", "reason", "requiresConfirmation"]
       }}
     },
-    required: ["reply", "memories", "tasks", "toolRequests"]
+    required: ["assessment", "options", "decision", "reply", "memories", "tasks", "toolRequests"]
   };
 
   const tools = [
@@ -74,7 +84,7 @@ export default async function handler(req, res) {
 
   const request = {
     model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
-    instructions: "你是玄曜，使用繁體中文。先理解目標，再給可執行回應。只有真正有必要時才使用本機工具：保存長期記憶或建立待辦。外部、付費、帳號、刪除、不可逆或重要操作不可直接執行，必須放入 toolRequests 並 requiresConfirmation=true。普通聊天時各陣列可為空。",
+    instructions: "你是玄曜，使用繁體中文，具備自主判斷能力。不要只等待使用者給完整方案：先理解真正目標與限制，主動拆解、探索未知但合理的替代方案，指出已知與未知，評估風險，並自行選擇低風險且符合目標的下一步。未知方案可以提出與研究方向，但不可把未知當成已驗證事實。對不需要外部權限的規劃、整理、比較與本機安全工具，可主動推進。涉及外部帳號、付款、刪除、公開發布、不可逆、重大資料變更或高風險操作，不可直接執行，必須放入 toolRequests 並 requiresConfirmation=true。assessment 說明判斷依據，options 提供有價值的替代路徑，decision 說明目前選擇的低風險下一步。不要輸出隱藏推理過程，只提供精簡可驗證的結論與依據。普通聊天時陣列可為空。",
     input, tools,
     text: { format: { type: "json_schema", name: "xuanyao_response", strict: true, schema } },
     max_output_tokens: 1400,
@@ -123,10 +133,13 @@ export default async function handler(req, res) {
   let parsed;
   try { parsed = JSON.parse(response?.output_text || "{}"); }
   catch {
-    parsed = { reply: response?.output_text || "玄曜已收到。", memories: [], tasks: [], toolRequests: [] };
+    parsed = { assessment: "", options: [], decision: "", reply: response?.output_text || "玄曜已收到。", memories: [], tasks: [], toolRequests: [] };
   }
 
   return res.status(200).json({
+    assessment: parsed.assessment || "",
+    options: Array.isArray(parsed.options) ? parsed.options.slice(0, 5) : [],
+    decision: parsed.decision || "",
     reply: parsed.reply || "玄曜已收到。",
     memories: Array.isArray(parsed.memories) ? parsed.memories : [],
     tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
