@@ -204,7 +204,30 @@ function evaluateActionGate(action={}) {
   };
 }
 
-function autonomousOrchestrator(){
+const SELF_CODE_CYCLE_KEY="xuanyao.selfCodeCycle.v1";
+function getSelfCodeCycle(){return readJSON(SELF_CODE_CYCLE_KEY,{status:"idle",branch:"",commitSha:"",target:"",failure:"",attempts:0,updatedAt:0});}
+function saveSelfCodeCycle(v){writeJSON(SELF_CODE_CYCLE_KEY,v);}
+function recordSelfCodeCycle(patch={}){const s={...getSelfCodeCycle(),...patch,updatedAt:Date.now()};saveSelfCodeCycle(s);return s;}
+function dispatchSelfCodeRecovery(){
+  const s=getSelfCodeCycle();
+  if(s.status==="await_confirmation"||s.status==="safe_stop") return s;
+  if(s.status==="failed"){
+    const recovery=prepareSelfCodeReplan(s.failure,s.target);
+    if(!recovery.ok){return recordSelfCodeCycle({status:"safe_stop",failure:recovery.reason});}
+    return recordSelfCodeCycle({status:"replan_ready",attempts:recovery.attempt,target:recovery.target,failure:recovery.reason});
+  }
+  if(s.status==="candidate_failed"){
+    return recordSelfCodeCycle({status:"failed",failure:s.failure});
+  }
+  return s;
+}
+function integrateSelfCodeCycle(base){
+  const cycle=dispatchSelfCodeRecovery();
+  if(cycle.status==="replan_ready") logActivity("自我修復調度","已產生下一輪受控重新規劃，不直接修改 main。");
+  if(cycle.status==="safe_stop") logActivity("自我修復安全停止",cycle.failure||"已達安全限制。");
+  return {...base,selfCodeCycle:cycle};
+}
+\nfunction autonomousOrchestrator(){
   const guard=guardAutonomousLoop();
   if(!guard.allowed) {
     const recovered=recoverAutonomyLoop();
@@ -230,9 +253,9 @@ function autonomousOrchestrator(){
   }else{
     mode="review";
   }
-  const result={at:Date.now(),mode,goal,system,action};
+  const result={at:Date.now(),mode,goal,system,action};\n  const integrated=integrateSelfCodeCycle(result);
   const snapshot=createAutonomySnapshot(result);
-  result.snapshotId=snapshot.id;
+  result.selfCodeCycle=integrated.selfCodeCycle;\n  result.snapshotId=snapshot.id;
   logActivity("自主調度",mode+(action?.text?"｜"+action.text:""));
   return result;
 }
