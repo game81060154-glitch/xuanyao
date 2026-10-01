@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.32";
+const CORE_VERSION = "1.33";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -771,6 +771,10 @@ async function ask(text) {
     const data = await res.json();
     const reply = data.reply || "後端沒有提供回應。";
     add("system", reply);
+    if (data.clarificationNeeded && String(data.clarificationQuestion || "").trim()) {
+      add("system", "玄曜需要你確認：" + String(data.clarificationQuestion).trim());
+      logActivity("主動澄清", String(data.clarificationQuestion).trim());
+    }
     applyStructuredActions(data, clean, reply);
     routeLocalIntent(clean, reply);
     backendState.textContent = "Connected";
