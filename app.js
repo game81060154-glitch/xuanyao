@@ -336,7 +336,15 @@ async function ask(text) {
     const res = await fetch(gateway, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: clean, history })
+      body: JSON.stringify({
+        message: clean,
+        history,
+        context: {
+          memories: searchMemories(clean, 12).map(m => ({ type: m.type, content: m.content, pinned: !!m.pinned })),
+          tasks: getTaskWorkflow().slice(0, 12).map(t => ({ id: t.id, text: t.text, done: !!t.done, dependsOn: Array.isArray(t.dependsOn) ? t.dependsOn : [] })),
+          pendingApprovals: approvals.filter(a => a.status === "pending").slice(0, 8).map(a => ({ toolId: a.toolId, reason: a.reason }))
+        }
+      })
     });
     if (!res.ok) throw new Error("backend");
     const data = await res.json();
