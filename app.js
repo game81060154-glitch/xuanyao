@@ -979,6 +979,19 @@ async function runAutonomousMissionTick(){
       const reply=String(data.reply||"").trim();
       if(reply) add("system","【自主進度】"+reply);
       applyStructuredActions(data,payload.message,reply);
+
+      // 自動消化 AI 產生的研究佇列：只有研究服務可用時才執行，
+      // 每輪限制數量，避免無限外呼；失敗會留下狀態供下一輪重試/重規劃。
+      const plannedResearch=researchRecords.filter(r=>r && r.status==="planned").slice(0,2);
+      for(const record of plannedResearch){
+        await executeResearch(record.id);
+      }
+
+      // 若目前沒有待辦，讓目標審查產生下一個必要步驟；不宣稱目標已完成。
+      const assessment=assessGoalLocally();
+      if(assessment.status==="needs_review"){
+        await reviewGoal();
+      }
     }catch(error){
       backendStatus="unavailable";
       logActivity("自主規劃暫停","AI 後端目前不可用；本輪仍保留本機安全執行結果。");
