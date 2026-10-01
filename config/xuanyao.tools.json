@@ -64,7 +64,9 @@
     "self_code_replan_enabled": true,
     "self_code_failure_analysis_enabled": true,
     "self_code_bounded_recovery_enabled": true,
-    "self_code_replan_dispatch_enabled": true
+    "self_code_replan_dispatch_enabled": true,
+    "self_code_autonomous_cycle_enabled": true,
+    "self_code_retry_limit": 3
   },
   "tools": [
     {
@@ -304,6 +306,12 @@
       "scope": "external",
       "risk": "paid-confirm",
       "enabled": true
+    },
+    {
+      "id": "system.self_code_autonomous_cycle",
+      "name": "受控自我修復循環",
+      "risk": "controlled",
+      "description": "在安全限制內追蹤驗證失敗、重新規劃與安全停止狀態。"
     }
   ]
 }
