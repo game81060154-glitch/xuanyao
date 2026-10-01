@@ -611,7 +611,7 @@ async function executeResearch(id) {
     logActivity("研究完成",record.question+"｜"+record.status+"｜來源 "+record.sources.length+" 筆");
     add("system","玄曜查證完成：\n"+record.summary+(record.limitations?"\n限制："+record.limitations:"")+(record.sources.length?"\n來源："+record.sources.map(s=>s.title||s.url).slice(0,5).join("、"):""));
     const task=tasks.find(t=>!t.done && String(t.text||"").startsWith("查證："+record.question+"｜"));
-    if(task) completeTask(task.id);
+    if(task && record.status==="verified" && record.sources.length>0) completeTask(task.id);
     if(record.nextQuestion && !researchRecords.some(r=>r.question===record.nextQuestion && r.status!=="failed")){
       saveResearchRecord({question:record.nextQuestion,purpose:"釐清目前證據不足之處",status:"planned",summary:"上一輪查證指出仍需最小化追查。",confidence:"unverified"});
       logActivity("最小追查","已建立下一個必要查證問題");
