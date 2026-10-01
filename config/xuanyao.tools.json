@@ -68,6 +68,7 @@
     "self_code_autonomous_cycle_enabled": true,
     "backend_health_diagnostics_enabled": true,
     "autonomous_maintenance_audit_enabled": true,
+    "continuous_autonomous_mission_enabled": true,
     "self_code_retry_limit": 3
   },
   "tools": [
@@ -324,6 +325,14 @@
       "risk": "safe",
       "enabled": true,
       "description": "檢查 AI 後端、版本與受控自我修改環境是否可用。"
+    },
+    {
+      "id": "system.autonomous_mission",
+      "name": "持續自主目標循環",
+      "scope": "local",
+      "risk": "controlled",
+      "enabled": true,
+      "description": "在已有目標下持續檢查、規劃與推進低風險工作；外部高風險事項仍進入確認閘門。"
     },
     {
       "id": "system.self_code_autonomous_cycle",
