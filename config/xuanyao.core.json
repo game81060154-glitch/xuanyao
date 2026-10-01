@@ -57,6 +57,8 @@
     "optimization_risk_gate": true,
     "optimization_validation": true,
     "version_consistency_check": true,
+    "optimization_prioritization": true,
+    "single_change_guard": true,
     "recovery_history": true
   },
   "memory": {
