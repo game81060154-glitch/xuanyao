@@ -30,6 +30,8 @@
     "goal_satisfaction_review_enabled": true,
     "bounded_failure_recovery_enabled": true,
     "safe_stop_enabled": true,
+    "task_execution_engine_enabled": true,
+    "execution_result_validation_enabled": true,
     "recovery_history_enabled": true
   },
   "tools": [
@@ -37,6 +39,8 @@
     {"id":"memory.search","name":"搜尋記憶","scope":"local","risk":"safe","enabled":true},
     {"id":"task.create","name":"建立任務","scope":"local","risk":"safe","enabled":true},
     {"id":"task.complete","name":"完成任務","scope":"local","risk":"safe","enabled":true},
+    {"id":"task.classify","name":"任務分類","scope":"local","risk":"safe","enabled":true},
+    {"id":"task.execute","name":"安全任務執行","scope":"local","risk":"controlled","enabled":true},
     {"id":"data.export","name":"匯出資料","scope":"local","risk":"safe","enabled":true},
     {"id":"intent.route","name":"意圖路由","scope":"local","risk":"safe","enabled":true},
     {"id":"structured.plan","name":"結構化規劃","scope":"local","risk":"safe","enabled":true},
