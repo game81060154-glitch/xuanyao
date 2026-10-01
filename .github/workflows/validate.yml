@@ -41,6 +41,7 @@ jobs:
           test -f style.css
           test -f sw.js
           test -f README.md
+          test -f api/health.js
           echo "Required files OK"
 
       - name: Validate deployment configuration
@@ -104,5 +105,6 @@ jobs:
           for (const id of ["system.self_code_plan","system.self_code_execute","system.self_code_status","system.self_code_replan","system.self_code_lifecycle","system.self_code_autonomous_cycle"]) {
             if (!ids.has(id)) throw new Error("Missing tool: " + id);
           }
+          if (!fs.existsSync("api/health.js")) throw new Error("Missing backend health endpoint");
           console.log("Self-code lifecycle configuration OK");
           NODE
