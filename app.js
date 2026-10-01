@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.10";
+const CORE_VERSION = "1.12";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
 const ACTIVITY_KEY = "xuanyao.activity.v1";
@@ -55,7 +55,7 @@ function createTask(text, parentId=null, dependsOn=[]) {
 }
 function canCompleteTask(task) {
   const deps=Array.isArray(task.dependsOn)?task.dependsOn:[];
-  return deps.every(id => { const dep=tasks.find(t=>t.id===id); return !dep || dep.done; });
+  return deps.every(id => { const dep=tasks.find(t=>t.id===id); return Boolean(dep) && dep.done; });
 }
 function completeTask(id) {
   const task=tasks.find(t=>t.id===id);
@@ -233,7 +233,7 @@ function memoryScore(m, query="") {
   const q=String(query||"").toLowerCase().trim();
   let score=m.pinned?5:0;
   if(!q) return score + (m.updatedAt||m.createdAt||0)/1e13;
-  q.split(/\\s+/).filter(Boolean).forEach(word=>{ if(text.includes(word)) score+=3; });
+  q.split(/\s+/).filter(Boolean).forEach(word=>{ if(text.includes(word)) score+=3; });
   if(text.includes(q)) score+=8;
   return score + (m.updatedAt||m.createdAt||0)/1e13;
 }
@@ -258,8 +258,9 @@ function renderMemoryTools() {
   ).join("") : "<div class='empty'>目前沒有符合的記憶。</div>";
 }
 function renderTasks() {
-  taskList.innerHTML = tasks.length ? tasks.map(t =>
-    `<div class="task ${t.done ? "done" : ""}"><button data-task="${t.id}" class="task-toggle" type="button">${t.done ? "✓" : "○"}</button><span>${escapeHTML(t.text)}</span><button data-delete="${t.id}" class="task-delete" type="button">刪除</button></div>`
+  const workflow = getTaskWorkflow();
+  taskList.innerHTML = workflow.length ? workflow.map(t =>
+    `<div class="task ${t.done ? "done" : ""}"><button data-task="${t.id}" class="task-toggle" type="button">${t.done ? "✓" : "○"}</button><span>${escapeHTML(t.text)}${Array.isArray(t.dependsOn) && t.dependsOn.length && !canCompleteTask(t) ? "｜等待前置任務" : ""}</span><button data-delete="${t.id}" class="task-delete" type="button">刪除</button></div>`
   ).join("") : "<div class='empty'>尚無任務。</div>";
 }
 async function ask(text) {
