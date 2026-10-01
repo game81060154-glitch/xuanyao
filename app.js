@@ -1,7 +1,7 @@
 const KEY = "xuanyao.messages.v2";
 const TASK_KEY = "xuanyao.tasks.v1";
 const MEMORY_KEY = "xuanyao.memory.v1";
-const CORE_VERSION = "1.31";
+const CORE_VERSION = "1.32";
 const AUTOMATION_KEY = "xuanyao.automation.v1";
 const GATEWAY_KEY = "xuanyao.gateway.v1";
 const APPROVAL_KEY = "xuanyao.approvals.v1";
@@ -164,6 +164,20 @@ function detectAutonomyLoop(){
   const loop=recent.length===3 && new Set(recent).size===1;
   if(loop) logActivity("自主循環偵測","最近 3 次自主決策完全重複，暫停原路徑。");
   return {loop,recent};
+}
+function recoverAutonomyLoop(){
+  const key="xuanyao.autonomy.guard.v1";
+  const guard=readJSON(key,{blocked:false});
+  if(!guard.blocked) return {recovered:false,reason:"目前沒有循環鎖定"};
+  guard.blocked=false;
+  guard.recoveredAt=Date.now();
+  guard.recoveryReason="已清除循環鎖，等待重新規劃";
+  writeJSON(key,guard);
+  logActivity("自主恢復","循環鎖已清除，允許重新規劃。");
+  return {recovered:true};
+}
+function getAutonomyRecoveryState(){
+  return readJSON("xuanyao.autonomy.guard.v1",{blocked:false});
 }
 function guardAutonomousLoop(){
   const detection=detectAutonomyLoop();
